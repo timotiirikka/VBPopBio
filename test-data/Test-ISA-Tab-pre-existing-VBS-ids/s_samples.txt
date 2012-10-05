@@ -1,0 +1,3 @@
+Source Name	Sample Name	Description	Material Type	Term Source REF	Term Accession Number
+VBS0000001	VBS0000001	previously SM-NRUE	whole organism	EFO	0002906	Anopheles gambiae	NCBITaxon	7165
+VBS0000002	VBS0000002	previously SM-NRUF	whole organism	EFO	0002906			
