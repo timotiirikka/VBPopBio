@@ -120,10 +120,8 @@ sub create_from_isatab {
 	@unique_info = ();
 
 	# link to the nd_experiment
-
-warn "SOMETHING BROKEN LINKING PHENOTYPE TO PHENOTYPE_ASSAY - code commented out\n";
-#	my $assay_link = $phenotype->find_or_create_related('nd_experiment_phenotypes',
-#							    { nd_experiment => $phenotype_assay });
+	my $assay_link = $phenotype->find_or_create_related('nd_experiment_phenotypes',
+							    { nd_experiment => $phenotype_assay });
 
 	# now add the phenotypeprops that we already encountered in the phenote file
 	# this time, only add a ontologised term (silently skip any with no db:acc provided)
