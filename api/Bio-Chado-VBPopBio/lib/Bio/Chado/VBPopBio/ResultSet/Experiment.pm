@@ -95,6 +95,28 @@ sub search_on_properties_cv_acc {
 }
 
 
+=head2 find_by_stable_id
+
+returns a single result with the stable id
+
+TO DO: describe failure modes
+
+=cut
+
+sub find_by_stable_id {
+  my ($self, $stable_id) = @_;
+
+  my $schema = $self->result_source->schema;
+  my $db = $schema->dbs->find_or_create({ name => 'VBA' });
+
+  my $search = $db->dbxrefs->search({ accession => $stable_id });
+
+  if ($search->count == 1 && $search->first->nd_experiment_dbxrefs->count == 1) {
+    return $search->first->nd_experiment_dbxrefs->first->nd_experiment;
+  }
+  return undef;
+}
+
 =head1 AUTHOR
 
 VectorBase, C<< <info at vectorbase.org> >>

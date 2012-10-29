@@ -141,6 +141,9 @@ by looking up dbxrefprop "project external ID"
 
 It will create a new entry with the next available accession if there is none.
 
+The dbxref cannot be attached directly to the project (because there's no suitable
+relationship in Chado).
+
 =cut
 
 sub stable_id {
@@ -199,7 +202,11 @@ sub stable_id {
 
 =head2 delete
 
-deletes the project in a cascade which deletes all would-be orphan related objects
+Deletes the project in a cascade which deletes all would-be orphan related objects.
+
+It does not delete any would-be-orphaned contacts or publications.  Hopefully that will be
+OK.  If not we will have to check that the contacts (or publications) don't belong to
+several different object types before deletion.
 
 =cut
 

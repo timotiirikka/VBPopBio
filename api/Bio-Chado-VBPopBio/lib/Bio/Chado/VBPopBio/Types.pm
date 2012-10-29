@@ -55,15 +55,33 @@ sub sample_external_ID {
   return $self->schema->cvterms->create_with
     ({ name => 'sample external ID',
        cv => 'VBcv',
-       description => 'A sample ID (originating in ISA-Tab Sample Name column.'.
-       'It need not follow any formatting rulse, but it'.
+       description => 'A sample ID (originating in ISA-Tab Sample Name column).'.
+       'It need not follow any formatting rules, but it'.
        'should be unique within a data submission.'
      });
 }
 
+=head2 experiment_external_ID
+
+User-provided ID for experiments, e.g. Mali-1234
+
+=cut
+
+sub experiment_external_ID {
+  my $self = shift;
+  return $self->schema->cvterms->create_with
+    ({ name => 'experiment external ID',
+       cv => 'VBcv',
+       description => 'An experiment ID (originating in ISA-Tab Assay Name column).'.
+       'It need not follow any formatting rules, but it'.
+       'should be unique within the entire ISA-Tab data submission.'
+     });
+}
 
 =head2 start_date
+
 VBcv:start date
+
 =cut
 
 sub start_date {
@@ -74,7 +92,9 @@ sub start_date {
 }
 
 =head2 end_date
+
 VBcv:end date
+
 =cut
 
 sub end_date {
@@ -84,7 +104,9 @@ sub end_date {
 }
 
 =head2 placeholder
+
 any old term
+
 =cut
 
 sub placeholder {

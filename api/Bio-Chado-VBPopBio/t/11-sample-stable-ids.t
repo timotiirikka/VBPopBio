@@ -19,7 +19,7 @@ my $stocks = $schema->stocks;
 my $result =
   $schema->txn_do(sub {
 		    my $proj_extID_type = $schema->types->project_external_ID;
-		    my $samp_extID_type = $schema->types->sample_external_ID;
+
 		    my $organism = $organisms->first;
 		    my $stock_type = $schema->types->placeholder;
 

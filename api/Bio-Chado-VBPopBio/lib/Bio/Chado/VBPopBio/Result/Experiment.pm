@@ -11,6 +11,7 @@ __PACKAGE__->subclass({ nd_experiment_stocks => 'Bio::Chado::VBPopBio::Result::L
 		        nd_experiment_protocols => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentProtocol',
 		        nd_experiment_genotypes => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentGenotype',
 		        nd_experiment_phenotypes => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentPhenotype',
+		        nd_experiment_dbxrefs => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentDbxref',
 			type => 'Bio::Chado::VBPopBio::Result::Cvterm',
 		      });
 
@@ -296,6 +297,132 @@ sub delete {
 
   return $self->SUPER::delete();
 }
+
+
+=head2 external_id
+
+no args, returns the project external id ("Assay Name" from ISA-Tab)
+
+=cut
+
+sub external_id {
+  my ($self) = @_;
+  my $schema = $self->result_source->schema;
+  my $expt_extID_type = $schema->types->experiment_external_ID;
+
+  my $props = $self->search_related('nd_experimentprops',
+				    { type_id => $expt_extID_type->id } );
+
+  croak "Project does not have exactly one external id projectprop"
+    unless ($props->count == 1);
+
+  return $props->first->value;
+}
+
+
+=head2 stable_id
+
+no args
+
+Returns a dbxref->accession from
+
+1. [quick] single matching nd_experiment_dbxrefs from db.name=VBA (croak if multiple hits)
+2. by looking up a dbxref from VBA with dbxrefprop "project external ID" == $project->external_id
+   and dbxrefprop "experiment external ID" == $self->external_id
+   It will create a new entry with the next available accession if there is none.
+
+=cut
+
+sub stable_id {
+  my ($self, $project) = @_;
+
+  my $schema = $self->result_source->schema;
+
+  my $db = $schema->dbs->find_or_create({ name => 'VBA' });
+
+
+  #
+  # first see if there is one single dbxref (connected via nd_experiment_dbxrefs)
+  # and return its accession
+  #
+  my $quicksearch = $self->search_related
+    ( 'nd_experiment_dbxrefs',
+      { 'dbxref.db_id' => $db->id },
+      { join => 'dbxref' }
+    );
+
+  if ((my $count = $quicksearch->count()) == 1) {
+    return $quicksearch->first->dbxref->accession;
+  } elsif ($count > 1) {
+    croak "fatal error: too many VBA dbxrefs attached to nd_experiment: ".$self->external_id."\n";
+  }
+
+  #
+  # now look up stable ID in the persistent dbxref table
+  #
+
+  my $proj_extID_type = $schema->types->project_external_ID;
+  my $expt_extID_type = $schema->types->experiment_external_ID;
+
+  my $search = $db->dbxrefs->search
+    ({
+      'dbxrefprops.type_id' => $proj_extID_type->id,
+      'dbxrefprops.value' => $project->external_id,
+      'dbxrefprops_2.type_id' => $expt_extID_type->id,
+      'dbxrefprops_2.value' => $self->external_id,
+     },
+     { join => [ 'dbxrefprops', 'dbxrefprops' ] }
+    );
+
+  if ($search->count == 0) {
+    # need to make a new ID
+
+    # first, find the "highest" accession in dbxref for VBP
+    my $last_dbxref_search = $schema->dbxrefs->search
+      ({ 'db.name' => 'VBA' },
+       { join => 'db',
+	 order_by => { -desc => 'accession' },
+         limit => 1 });
+
+    my $next_number = 1;
+    if ($last_dbxref_search->count) {
+      my $acc = $last_dbxref_search->first->accession;
+      my ($prefix, $number) = $acc =~ /(\D+)(\d+)/;
+      $next_number = $number+1;
+    }
+
+    # now create the dbxref
+    my $new_dbxref = $schema->dbxrefs->create
+      ({
+	db => $db,
+	accession => sprintf("VBA%07d", $next_number),
+	dbxrefprops => [ {
+			 type => $proj_extID_type,
+			 value => $project->external_id,
+			 rank => 0,
+			},
+		        {
+			 type => $expt_extID_type,
+			 value => $self->external_id,
+			 rank => 0,
+			},
+		       ]
+       });
+    # set the stock.dbxref to the new dbxref
+    $self->find_or_create_related('nd_experiment_dbxrefs', { dbxref=>$new_dbxref });
+    return $new_dbxref->accession; # $self->stable_id would be nice but slower
+  } elsif ($search->count == 1) {
+    # set the stock.dbxref to the stored stable id dbxref
+    my $old_dbxref = $search->first;
+    $self->find_or_create_related('nd_experiment_dbxrefs', { dbxref=>$old_dbxref });
+    return $old_dbxref->accession;
+  } else {
+    croak "Too many VBA dbxrefs for project ".$project->external_id." + experiment ".$self->external_id."\n";
+  }
+
+}
+
+
 
 =head2 as_data_structure
 
