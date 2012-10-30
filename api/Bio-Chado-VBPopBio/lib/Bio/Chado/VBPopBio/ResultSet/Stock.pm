@@ -444,6 +444,25 @@ sub search_by_species_identification_assay_result {
 				     ] }}})->search({ 'type_2.name' => 'species identification assay' });
 }
 
+=head2 find_by_stable_id
+
+Look up dbxref VBS entry and return stock if it has one
+
+=cut
+
+sub find_by_stable_id {
+  my ($self, $stable_id) = @_;
+
+  my $schema = $self->result_source->schema;
+  my $db = $schema->dbs->find_or_create({ name => 'VBS' });
+
+  my $search = $db->dbxrefs->search({ accession => $stable_id });
+
+  if ($search->count == 1 && $search->first->stocks->count == 1) {
+    return $search->first->stocks->first;
+  }
+  return undef;
+}
 
 =head1 TO DO
 

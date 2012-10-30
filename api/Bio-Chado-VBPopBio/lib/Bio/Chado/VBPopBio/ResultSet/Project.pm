@@ -221,6 +221,61 @@ sub create_from_isatab {
 }
 
 
+=head2 find_by_stable_id 
+
+Returns a project result by stable id.
+
+Because there's no direct link between the dbxref and the project, the
+route is a bit tortuous.  Looks for VBP dbxref with the accession then
+finds the external_id - then looks for the project with the
+external_id as a projectprop.
+
+=cut
+
+sub find_by_stable_id {
+  my ($self, $stable_id) = @_;
+  my $schema = $self->result_source->schema;
+  my $proj_extID_type = $schema->types->project_external_ID;
+  my $db = $schema->dbs->find_or_create({ name => 'VBP' });
+
+  my $search = $db->dbxrefs->search({ accession => $stable_id });
+  if ($search->count == 1) {
+    # now get the external id from the dbxrefprops
+    my $dbxref = $search->first;
+    my $propsearch = $dbxref->dbxrefprops->search({ type_id => $proj_extID_type->id });
+    if ($propsearch->count == 1) {
+      my $external_id = $propsearch->first->value;
+      return $self->find_by_external_id($external_id);
+    }
+  }
+  return undef;
+}
+
+=head2 find_by_external_id
+
+look up the project via projectprops external id
+
+=cut
+
+
+sub find_by_external_id {
+  my ($self, $external_id) = @_;
+  my $schema = $self->result_source->schema;
+  my $proj_extID_type = $schema->types->project_external_ID;
+  my $search = $self->search_related
+    ("projectprops",
+     {
+      type_id => $proj_extID_type->id,
+      value => $external_id,
+     }
+    );
+  if ($search->count == 1) {
+    return $search->first->project;
+  }
+
+  return undef;
+}
+
 =head1 AUTHOR
 
 VectorBase, C<< <info at vectorbase.org> >>

@@ -99,7 +99,7 @@ sub search_on_properties_cv_acc {
 
 returns a single result with the stable id
 
-TO DO: describe failure modes
+TO DO: describe failure modes (currently just returns undef if not found or ambiguous dbxrefs)
 
 =cut
 

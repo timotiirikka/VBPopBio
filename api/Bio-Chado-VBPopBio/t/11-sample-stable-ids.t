@@ -1,4 +1,4 @@
-use Test::More tests => 9;
+use Test::More tests => 12;
 
 #
 # tests sample stable IDs
@@ -68,6 +68,10 @@ my $result =
 		    # now delete the first stock and make it again - it should pick up the same stable ID
 
 		    $stock1->delete;
+
+		    # but first, check that find_by_stable_id returns undef
+		    is($stocks->find_by_stable_id($stable_id1), undef, "shouldn't find stock1 by stable id");
+
 		    my $stock1a = $stocks->create({ organism => $organism,
 						   name => 'Test stock 1',
 						   uniquename => 'Test0001',
@@ -76,6 +80,11 @@ my $result =
 						 });
 		    my $stable_id1a = $stock1a->stable_id($project);
 		    is($stable_id1, $stable_id1a, "recreated stock stable id is the same");
+
+		    # test find_by_stable_id
+		    my $s2 = $stocks->find_by_stable_id($stable_id2);
+		    isa_ok($s2, "Bio::Chado::VBPopBio::Result::Stock", "found something of the right class");
+		    is($s2->id, $stock2->id, "same pkey id");
 
 		    $schema->txn_rollback();
 		  });
