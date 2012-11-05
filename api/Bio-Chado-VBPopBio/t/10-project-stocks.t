@@ -1,4 +1,4 @@
-use Test::More tests => 13;
+use Test::More tests => 19;
 
 use Bio::Chado::VBPopBio;
 my $dsn = "dbi:Pg:dbname=$ENV{CHADO_DB_NAME}";
@@ -89,6 +89,14 @@ my $result =
 
 		    $new_stock2->add_to_projects($project3);
 		    is($new_stock2->projects->count, 3, "should be the three now");
+
+		    is($projects->count, 3, "three projects");
+		    is($projects->stocks->count, 2, "two stocks via projects");
+		    is($projects->search({'me.name' => 'test project unique name 123456'})->stocks->count, 1, "one stock via project 3");
+
+		    is($stocks->count, 2, "two stocks");
+		    is($stocks->projects->count, 3, "three projects via stocks");
+		    is($stocks->search({'uniquename'=>'Test0123'})->projects->count, 1, "one project via stock 1 search");
 
 		    $schema->txn_rollback();
 		  });

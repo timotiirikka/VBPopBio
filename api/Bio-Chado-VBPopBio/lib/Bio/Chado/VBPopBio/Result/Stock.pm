@@ -139,7 +139,7 @@ sub add_to_projects {
 
 =head2 projects
 
-convenience search distinct for all related projects
+convenience search for all related projects
 
 =cut
 
@@ -155,7 +155,6 @@ sub projects {
 				bind => [ $link_type->id ],
 			       }
 			      )->search_related('project');
-#  return $self->experiments->search_related('nd_experiment_projects')->search_related('project', {}, { distinct=>1 });
 }
 
 =head2 external_id

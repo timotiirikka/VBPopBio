@@ -267,6 +267,25 @@ sub find_by_external_id {
   return undef;
 }
 
+=head2 stocks
+
+returns the stocks linked to the project via add_to_stocks()
+
+=cut
+
+sub stocks {
+  my ($self, $stock) = @_;
+  my $link_type = $self->result_source->schema->types->project_stock_link;
+  return $self->search_related('project_stocks',
+			       {
+				# no search terms
+			       },
+			       {
+				bind => [ $link_type->id ],
+			       }
+			      )->search_related('stock', { }, { distinct => 1  });
+}
+
 =head2 looks_like_stable_id
 
 check to see if VBP\d{7}

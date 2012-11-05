@@ -244,13 +244,22 @@ sub find_or_create_from_isatab {
 
 =head2 projects
 
-convenience search distinct for all related projects
+convenience search for all related projects
 
 =cut
 
 sub projects {
   my ($self) = @_;
-  return $self->search_related('nd_experiment_stocks')->search_related('nd_experiment')->search_related('nd_experiment_projects')->search_related('project', {}, { distinct=>1 });
+  my $link_type = $self->result_source->schema->types->project_stock_link;
+
+  return $self->search_related('project_stocks',
+			       {
+				# no search terms
+			       },
+			       {
+				bind => [ $link_type->id ],
+			       }
+			      )->search_related('project', { }, { distinct => 1 });
 }
 
 =head2 search_by_project
@@ -265,6 +274,8 @@ Does not join to projectprops.
 
 sub search_by_project {
   my ($self, $query) = @_;
+
+  warn "deprecated search_by_project - needs updating to use project_stock\n";
 
   croak "search_by_project argument must be a hash ref\n" unless (ref($query) eq 'HASH');
 
