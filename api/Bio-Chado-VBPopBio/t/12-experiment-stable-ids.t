@@ -29,11 +29,12 @@ my $result =
 		      ({
 			name => 'test project unique name 123',
 			description => 'should not exist',
-			projectprops => [ { type => $proj_extID_type,
-					    value => '1970-Smith-test',
-					    rank => 0
-					  } ]
+#			projectprops => [ { type => $proj_extID_type,
+#					    value => '1970-Smith-test',
+#					    rank => 0
+#					  } ]
 		       });
+		    $project->external_id('1970-Smith-test');
 
 		    my $project_stable_id = $project->stable_id;
 
@@ -53,26 +54,14 @@ my $result =
 
 
 		    my $experiment1 = $schema->phenotype_assays->create();
-		    $experiment1->find_or_create_related('nd_experimentprops',
-							 {
-							  type => $expt_extID_type,
-							  value => 'MyLovelyAssay001',
-							  rank => 0
-							 }
-							);
+		    $experiment1->external_id('MyLovelyAssay001');
 
 		    my $experiment2 = $schema->phenotype_assays->create();
-		    $experiment2->find_or_create_related('nd_experimentprops',
-							 {
-							  type => $expt_extID_type,
-							  value => 'MyLovelyAssay002',
-							  rank => 0
-							 }
-							);
+		    $experiment2->external_id('MyLovelyAssay002');
 
 		    # see if we can assign a stable id via project
 		    my $expt1_stable_id = $experiment1->stable_id($project);
-		    like($expt1_stable_id, qr/^VBA\d+$/, "stable ID looks ok");
+		    ok($experiments->looks_like_stable_id($expt1_stable_id), "stable ID looks ok");
 
 		    # second stable id should be different to first
 		    isnt($expt1_stable_id, $experiment2->stable_id($project), "expts1+2 different IDs");
@@ -85,13 +74,7 @@ my $result =
 		    $experiment1->delete();
 
 		    my $experiment1a = $schema->phenotype_assays->create();
-		    $experiment1a->find_or_create_related('nd_experimentprops',
-							 {
-							  type => $expt_extID_type,
-							  value => 'MyLovelyAssay001',
-							  rank => 0
-							 }
-							);
+		    $experiment1a->external_id('MyLovelyAssay001');
 
 		    # now check that we can't just get the stable id without project
 		    is(eval { $experiment1a->stable_id() }, undef, "couldn't get stable_id without project");

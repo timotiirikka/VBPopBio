@@ -301,22 +301,44 @@ sub delete {
 
 =head2 external_id
 
-no args, returns the project external id ("Assay Name" from ISA-Tab)
+getter/setter for project external id ("Assay Name" from ISA-Tab)
+
+returns undef if not found
 
 =cut
 
 sub external_id {
-  my ($self) = @_;
+  my ($self, $external_id) = @_;
   my $schema = $self->result_source->schema;
   my $expt_extID_type = $schema->types->experiment_external_ID;
 
   my $props = $self->search_related('nd_experimentprops',
 				    { type_id => $expt_extID_type->id } );
 
-  croak "Project does not have exactly one external id projectprop"
-    unless ($props->count == 1);
+  if ($props->count > 1) {
+    croak "experiment has too many external ids\n";
+  } elsif ($props->count == 1) {
+    my $retval = $props->first->value;
+    croak "attempted to set a new external id ($external_id) for experiment with existing id ($retval)\n" if (defined $external_id && $external_id ne $retval);
 
-  return $props->first->value;
+    return $retval;
+  } else {
+    if (defined $external_id) {
+      # no existing external id so create one
+      # create the prop and return the external id
+      $self->find_or_create_related('nd_experimentprops',
+							 {
+							  type => $expt_extID_type,
+							  value => $external_id,
+							  rank => 0
+							 }
+							);
+      return $external_id;
+    } else {
+      return undef;
+    }
+  }
+  return undef;
 }
 
 
@@ -410,6 +432,7 @@ sub stable_id {
        });
     # set the stock.dbxref to the new dbxref
     $self->find_or_create_related('nd_experiment_dbxrefs', { dbxref=>$new_dbxref });
+    # warn "new stable id ".$new_dbxref->accession." for $self ".$self->external_id."\n";
     return $new_dbxref->accession; # $self->stable_id would be nice but slower
   } elsif ($search->count == 1) {
     # set the stock.dbxref to the stored stable id dbxref
@@ -420,6 +443,48 @@ sub stable_id {
     croak "Too many VBA dbxrefs for project ".$project->external_id." + experiment ".$self->external_id."\n";
   }
 
+}
+
+
+=head2 add_multiprop
+
+Adds normal props to the object but in a way that they can be
+retrieved in related semantic chunks or chains.  E.g.  'insecticide'
+=> 'permethrin' => 'concentration' => 'mg/ml' => 150 where everything
+in single quotes is an ontology term.  A multiprop is a chain of
+cvterms optionally ending in a free text value.
+
+This is more flexible than adding a cvalue column to all prop tables.
+
+Usage: $experiment>add_multiprop($multiprop);
+
+See also: Util::Multiprop (object) and Util::Multiprops (utility methods)
+
+=cut
+
+sub add_multiprop {
+  my ($self, $multiprop) = @_;
+
+  return Multiprops->add_multiprop
+    ( multiprop => $multiprop,
+      row => $self,
+      prop_relation_name => 'nd_experimentprops',
+    );
+}
+
+=head2 multiprops
+
+get a arrayref of multiprops
+
+=cut
+
+sub multiprops {
+  my ($self) = @_;
+
+  return Multiprops->get_multiprops
+    ( row => $self,
+      prop_relation_name => 'nd_experimentprops',
+    );
 }
 
 

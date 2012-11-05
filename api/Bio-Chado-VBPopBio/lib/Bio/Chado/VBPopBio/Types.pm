@@ -166,4 +166,20 @@ sub species_identification_assay {
 					     });
 }
 
+=head2 project_stock_link
+
+Used to link stocks to projects directly in Chado.  This is a bit of a hack!
+
+=cut
+
+sub project_stock_link {
+  my $self = shift;
+  return $self->schema->cvterms->create_with({ name => 'project stock link',
+					       cv => 'TEMPcv',
+					       db => 'TEMPcv',
+					       dbxref => 'project_stock_link',
+					       description => 'Used to link stocks to projects directly in Chado.  This is a bit of a hack.',
+					     });
+}
+
 1;

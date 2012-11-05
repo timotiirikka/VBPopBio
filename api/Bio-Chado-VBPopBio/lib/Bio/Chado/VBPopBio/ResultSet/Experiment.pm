@@ -117,6 +117,19 @@ sub find_by_stable_id {
   return undef;
 }
 
+=head2 looks_like_stable_id
+
+arg: ID
+
+returns true if it matches VBA\d+
+
+=cut
+
+sub looks_like_stable_id {
+  my ($self, $id) = @_;
+  return $id =~ /^VBA\d{7}$/;
+}
+
 =head1 AUTHOR
 
 VectorBase, C<< <info at vectorbase.org> >>

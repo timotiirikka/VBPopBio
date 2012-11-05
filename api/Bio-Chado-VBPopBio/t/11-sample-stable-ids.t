@@ -27,11 +27,12 @@ my $result =
 		      ({
 			name => 'test project unique name 123',
 			description => 'should not exist',
-			projectprops => [ { type => $proj_extID_type,
-					    value => '1970-Smith-test',
-					    rank => 0
-					  } ]
+#			projectprops => [ { type => $proj_extID_type,
+#					    value => '1970-Smith-test',
+#					    rank => 0
+#					  } ]
 		       });
+		    $project->external_id('1970-Smith-test');
 
 		    ok(defined $project, "project object defined");
 		    is($project->external_id, '1970-Smith-test', "external id");
@@ -52,7 +53,7 @@ my $result =
 
 		    my $stable_id1 = $stock1->stable_id($project);
 		    ok(defined $stable_id1, "stable ID returned");
-		    like($stable_id1, qr/^VBS\d+$/, "stable ID looks good");
+		    ok($stocks->looks_like_stable_id($stable_id1), "stable ID looks good");
 
 		    my $stock2 = $stocks->create({ organism => $organism,
 						   name => 'Test stock 2',
@@ -62,7 +63,7 @@ my $result =
 						 });
 		    my $stable_id2 = $stock2->stable_id($project);
 		    isnt($stable_id1, $stable_id2, "stable IDs for stock1 and stock2 are different");
-		    like($stable_id2, qr/^VBS\d+$/, "stable ID for stock2 looks good");
+		    ok($stocks->looks_like_stable_id($stable_id2), "stable ID for stock2 looks good");
 
 
 		    # now delete the first stock and make it again - it should pick up the same stable ID

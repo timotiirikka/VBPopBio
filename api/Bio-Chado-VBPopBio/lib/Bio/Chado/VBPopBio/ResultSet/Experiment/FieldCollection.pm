@@ -33,7 +33,7 @@ sub new {
 
 =head2 create_from_isatab
 
- Usage: $field_collections->create_from_isatab($isatab_assay_data, $project, $ontologies, $study);
+ Usage: $field_collections->create_from_isatab($assay_name, $isatab_assay_data, $project, $ontologies, $study);
 
  Desc: This method creates a FieldCollection nd_experiment object from the isatab assay sample hashref
        (from a field collection assay)
@@ -52,8 +52,19 @@ sub new {
 =cut
 
 sub create_from_isatab {
-  my ($self, $assay_data, $project, $ontologies, $study) = @_;
+  my ($self, $assay_name, $assay_data, $project, $ontologies, $study) = @_;
   my $schema = $self->result_source->schema;
+
+  if ($self->looks_like_stable_id($assay_name)) {
+    my $existing_experiment = $self->find_by_stable_id($assay_name);
+    if (defined $existing_experiment) {
+      my $project_link = $existing_experiment->find_or_create_related('nd_experiment_projects',
+								      { project => $project,
+								      });
+      return $existing_experiment;
+    }
+    $schema->defer_exception("$assay_name looks like a stable ID but we couldn't find it in the database");
+  }
 
   # create the nd_experiment and stock linker type
   my $cvterms = $schema->cvterms;
@@ -64,9 +75,8 @@ sub create_from_isatab {
 
   # always create a new nd_experiment object
   my $field_collection = $self->create({ nd_geolocation => $geolocation });
-
-  # TO DO?
-  # experiment dbxref? VBASSAY0001234
+  $field_collection->external_id($assay_name);
+  my $stable_id = $field_collection->stable_id($project);
 
   # add the protocols
   $field_collection->add_to_protocols_from_isatab($assay_data->{protocols}, $ontologies, $study);

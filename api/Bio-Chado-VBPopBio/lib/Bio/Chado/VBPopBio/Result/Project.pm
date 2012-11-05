@@ -20,6 +20,23 @@ Specialised project classes will soon be found in the.
 Bio::Chado::VBPopBio::Result::Project::* namespace.
 
 
+=head1 RELATIONSHIPS
+
+=head2 project_stocks
+
+related virtual object/table: Bio::Chado::VBPopBio::Result::Linker::ProjectStock
+
+see also methods add_to_stocks and stocks
+
+=cut
+
+__PACKAGE__->has_many(
+  "project_stocks",
+  "Bio::Chado::VBPopBio::Result::Linker::ProjectStock",
+  { "foreign.project_id" => "self.project_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head1 SUBROUTINES/METHODS
 
 =head2 experiments
@@ -77,16 +94,19 @@ sub species_identification_assays {
   return $self->experiments_by_type($self->result_source->schema->types->species_identification_assay);
 }
 
-=head2 stocks
-
-Get all stocks (via nd_experiments) with no duplicates
-
-=cut
-
-sub stocks {
-  my ($self) = @_;
-  return $self->experiments->search_related('nd_experiment_stocks')->search_related('stock', { } , { distinct => 1 });
-}
+### old method via nd_experiments - not fit for purpose
+### (remove me soon!)
+###
+###=head2 stocks
+###
+###Get all stocks (via nd_experiments) with no duplicates
+###
+###=cut
+###
+###sub stocks {
+###  my ($self) = @_;
+###  return $self->experiments->search_related('nd_experiment_stocks')->search_related('stock', { } , { distinct => 1 });
+###}
 
 =head2 experiments_by_type
 
@@ -113,23 +133,45 @@ sub experiments_by_type {
 
 =head2 external_id
 
-no args, returns the project external id (study identifier from ISA-Tab)
+get/setter for the project external id (study identifier from ISA-Tab)
 format 2011-MacCallum-permethrin-selected
+
+returns undef if not found
 
 =cut
 
 sub external_id {
-  my ($self) = @_;
+  my ($self, $external_id) = @_;
   my $schema = $self->result_source->schema;
   my $proj_extID_type = $schema->types->project_external_ID;
 
   my $props = $self->search_related('projectprops',
 				    { type_id => $proj_extID_type->id } );
 
-  croak "Project does not have exactly one external id projectprop"
-    unless ($props->count == 1);
+  if ($props->count > 1) {
+    croak "project has too many external ids\n";
+  } elsif ($props->count == 1) {
+    my $retval = $props->first->value;
+    croak "attempted to set a new external id ($external_id) for project with existing id ($retval)\n" if (defined $external_id && $external_id ne $retval);
 
-  return $props->first->value;
+    return $retval;
+  } else {
+    if (defined $external_id) {
+      # no existing external id so create one
+      # create the prop and return the external id
+      $self->find_or_create_related('projectprops',
+				    {
+				     type => $proj_extID_type,
+				     value => $external_id,
+				     rank => 0
+				    }
+				   );
+      return $external_id;
+    } else {
+      return undef;
+    }
+  }
+  return undef;
 }
 
 =head2 stable_id
@@ -223,6 +265,89 @@ sub delete {
   }
 
   return $self->SUPER::delete();
+}
+
+
+=head2 add_multiprop
+
+Adds normal props to the object but in a way that they can be
+retrieved in related semantic chunks or chains.  E.g.  'insecticide'
+=> 'permethrin' => 'concentration' => 'mg/ml' => 150 where everything
+in single quotes is an ontology term.  A multiprop is a chain of
+cvterms optionally ending in a free text value.
+
+This is more flexible than adding a cvalue column to all prop tables.
+
+Usage: $project->add_multiprop($multiprop);
+
+See also: Util::Multiprop (object) and Util::Multiprops (utility methods)
+
+=cut
+
+sub add_multiprop {
+  my ($self, $multiprop) = @_;
+
+  return Multiprops->add_multiprop
+    ( multiprop => $multiprop,
+      row => $self,
+      prop_relation_name => 'projectprops',
+    );
+}
+
+=head2 multiprops
+
+get a arrayref of multiprops
+
+=cut
+
+sub multiprops {
+  my ($self) = @_;
+
+  return Multiprops->get_multiprops
+    ( row => $self,
+      prop_relation_name => 'projectprops',
+    );
+}
+
+
+
+=head2 add_to_stocks
+
+there is no project_stocks relationship in Chado so we have a nasty
+hack using projectprops with a special type and a negative rank
+
+returns the projectprop
+
+=cut
+
+sub add_to_stocks {
+  my ($self, $stock) = @_;
+  my $link_type = $self->result_source->schema->types->project_stock_link;
+
+  return $self->find_or_create_related('projectprops',
+				       { type => $link_type,
+					 value => undef,
+					 rank => -$stock->id
+				       } );
+}
+
+=head2 stocks
+
+returns the stocks linked to the project via add_to_stocks()
+
+=cut
+
+sub stocks {
+  my ($self, $stock) = @_;
+  my $link_type = $self->result_source->schema->types->project_stock_link;
+  return $self->search_related('project_stocks',
+			       {
+				# no search terms
+			       },
+			       {
+				bind => [ $link_type->id ],
+			       }
+			      )->search_related('stock');
 }
 
 

@@ -101,106 +101,83 @@ sub find_or_create_from_isatab {
     # else permitted empty 'Characteristics [Organism]' column -> silently adds null organism to stock.
   }
 
- # croak "find or create stock and handle existing stable ID in ISA-Tab Sample Name column";
-
-  my $stock;
-
   # first check to see if we have a sample stable ID that's already in the db
-  if ($sample_name =~ /^VBS\d+/) {
-    my $vbs_db = $schema->dbs->find_or_create({ name => 'VBS' });
-    my $vbs_dbxref_search = $vbs_db->dbxrefs->search( { accession => $sample_name } );
-    if ($vbs_dbxref_search->count == 1) {
+  if ($self->looks_like_stable_id($sample_name)) {
+    my $existing_stock = $self->find_by_stable_id($sample_name); # will only work if sample_name is VBSnnnnnnn of course
+    if (defined $existing_stock) {
+      # now check some vital things are the same:
+      if ($existing_stock->type_id == $material_type->cvterm_id &&
+	  (
+	   # it's OK to leave organism blank when reusing a stock
+	   !defined $stock_organism ||
+	   # or if the existing stock has no organism and we don't provide one
+	   (!defined $existing_stock->organism && !defined $stock_organism) ||
+	   # or if the existing and provided organisms are the same
+	   $stock_organism->organism_id == $existing_stock->organism->organism_id
+	  )) {
 
-      my $vbs_dbxref = $vbs_dbxref_search->first;
-      if ($vbs_dbxref->stocks->count == 1) {
-	my $existing_stock = $vbs_dbxref->stocks->first;
-
-	# now check some vital things are the same:
-	if ($existing_stock->type_id == $material_type->cvterm_id &&
-	    (
-	     # it's OK to leave organism blank when reusing a stock
-	     !defined $stock_organism ||
-	     # or if the existing stock has no organism and we don't provide one
-	     (!defined $existing_stock->organism && !defined $stock_organism) ||
-	     # or if the existing and provided organisms are the same
-	     $stock_organism->organism_id == $existing_stock->organism->organism_id
-	    )) {
-	  $stock = $existing_stock;
-	} else {
-	  $schema->defer_exception("sample type and organism in ISA-Tab (".$material_type->name.", ".($stock_organism ? $stock_organism->name : 'null').") do not agree with pre-existing sample $sample_name (".$existing_stock->type->name().", ".($existing_stock->organism ? $existing_stock->organism->name : 'null').')');
+	if (keys %{$sample_data->{characteristics}}) {
+	  $schema->defer_exception_once("Sample characteristics have been provided for pre-existing samples.  This is not allowed (as validating them would be onerous).");
 	}
-      } elsif ($vbs_dbxref->stocks->count == 0) {
-	$schema->defer_exception("dbxref for $sample_name has no stock attached to it currently");
-	# carry on for now by making a new stock
+	return $existing_stock;
       } else {
-	# croaking because this is more of an API error (something badly wrong)
-	croak "dbxref for $sample_name has multiple stocks attached - something's wrong!";
+	$schema->defer_exception("sample type and organism in ISA-Tab (".$material_type->name.", ".($stock_organism ? $stock_organism->name : 'null').") do not agree with pre-existing sample $sample_name (".$existing_stock->type->name().", ".($existing_stock->organism ? $existing_stock->organism->name : 'null').')');
       }
-    } elsif ($vbs_dbxref_search->count == 0) {
-      $schema->defer_exception("can't find a dbxref for $sample_name");
-      # carry on for now with new stock
     } else {
-      # croaking because this is more of an API error (something badly wrong)
-      croak "sample name $sample_name found multiple VBS dbxrefs - something's wrong!";
-    }
-
-
-    if (keys %{$sample_data->{characteristics}}) {
-      $schema->defer_exception_once("Sample characteristics have been provided for pre-existing samples.  This is not allowed (as validating them would be onerous).");
+      $schema->defer_exception("$sample_name looked like a stable ID but we couldn't find it in the database");
     }
   }
 
-  if (!defined $stock) {
-    $stock = $self->create({
-			    name => $sample_name,
-			    uniquename => $study->{study_identifier}.":".$sample_name,
-			    description => $sample_data->{description},
-			    type => $material_type,
-			    defined $stock_organism ? (organism => $stock_organism) : (),
-			   });
+  # otherwise we create a new one
+  my $stock = $self->create({
+			     name => $sample_name,
+			     uniquename => $study->{study_identifier}.":".$sample_name,
+			     description => $sample_data->{description},
+			     type => $material_type,
+			     defined $stock_organism ? (organism => $stock_organism) : (),
+			    });
 
+  # Create or re-use a "stable id"
+  my $stable_id = $stock->stable_id($project);
 
-    # Create the "stable id" (created in the database)
-    my $stable_id = $stock->stable_id($project);
+  #
+  # Deal with arbitrary "Characteristics [ONTO:term name]" columns
+  # by adding multiprops for them
+  #
+  foreach my $cname (keys %{$sample_data->{characteristics}}) {
+    next if ($cname eq 'Organism');
 
-    #
-    # Deal with arbitrary "Characteristics [ONTO:term name]" columns
-    # by adding multiprops for them
-    #
-    foreach my $cname (keys %{$sample_data->{characteristics}}) {
-      next if ($cname eq 'Organism');
+    my $characteristic_data = $sample_data->{characteristics}{$cname};
 
-      my $characteristic_data = $sample_data->{characteristics}{$cname};
-
-      # first look up the name to see if it is a CV term
-      if ($cname =~ /(\w+):(.+)/) {
-	my $cterm = $cvterms->find_by_name({ term_source_ref => $1, term_name => $2 });
-	if (defined $cterm) {
-	  # we'll add a multiprop
-	  my @mterms;		#cvterms
-	  my $value;
-	  push @mterms, $cterm;
-	  my $vterm = $cvterms->find_by_accession($characteristic_data);
-	  if (defined $vterm) {
-	    push @mterms, $vterm;
-	  } else {
-	    $value = $characteristic_data->{value};
-	    # in this case, the multiprop is identical to a standard prop
-	  }
-	  my $mprop = $stock->add_multiprop(Multiprop->new(cvterms => \@mterms, value => $value));
-	  # warn "just added multiprop: ".$mprop->as_text."\n";
+    # first look up the name to see if it is a CV term
+    if ($cname =~ /(\w+):(.+)/) {
+      my $cterm = $cvterms->find_by_name({ term_source_ref => $1, term_name => $2 });
+      if (defined $cterm) {
+	# we'll add a multiprop
+	my @mterms;		#cvterms
+	my $value;
+	push @mterms, $cterm;
+	my $vterm = $cvterms->find_by_accession($characteristic_data);
+	if (defined $vterm) {
+	  push @mterms, $vterm;
 	} else {
-	  $schema->defer_exception_once("Can't find unique ontology term '$cname' for ISA-Tab sample column heading 'Characteristics ($cname)'");
+	  $value = $characteristic_data->{value};
+	  # in this case, the multiprop is identical to a standard prop
 	}
+	my $mprop = $stock->add_multiprop(Multiprop->new(cvterms => \@mterms, value => $value));
+	# warn "just added multiprop: ".$mprop->as_text."\n";
       } else {
-	$schema->defer_exception_once("Sample column 'Characteristics (>>>$cname<<<)' must use an ontology term, e.g. 'EFO:organism'\n");
+	$schema->defer_exception_once("Can't find unique ontology term '$cname' for ISA-Tab sample column heading 'Characteristics ($cname)'");
       }
-
+    } else {
+      $schema->defer_exception_once("Sample column 'Characteristics (>>>$cname<<<)' must use an ontology term, e.g. 'EFO:organism'\n");
     }
 
-    if ($sample_data->{factor_values}) {
-      warn "Warning: Not currently loading factor values for samples\n" unless ($self->{FV_WARNED_ALREADY}++);
-    }
+  }
+
+  if ($sample_data->{factor_values}) {
+    warn "Warning: Not currently loading factor values for samples\n" unless ($self->{FV_WARNED_ALREADY}++);
+  }
 
 #
 # NOT LOADING FACTOR VALUE COLUMNS AT PRESENT (see email discussion with Emmanuel/Pantelis)
@@ -261,7 +238,6 @@ sub find_or_create_from_isatab {
 #
 #      }
 #    }
-  }
 
   return $stock;
 }
@@ -463,6 +439,18 @@ sub find_by_stable_id {
   }
   return undef;
 }
+
+=head2 looks_like_stable_id
+
+check to see if VBS\d{7}
+
+=cut
+
+sub looks_like_stable_id {
+  my ($self, $id) = @_;
+  return $id =~ /^VBS\d{7}$/;
+}
+
 
 =head1 TO DO
 

@@ -18,25 +18,19 @@ my $result =
 		      ({
 			name => 'test project unique name 123',
 			description => 'should not exist',
-			projectprops => [ { type => $proj_extID_type,
-					    value => '1970-Smith-test',
-					    rank => 0
-					  } ]
 		       });
+		    $project->external_id('1970-Smith-test');
 
 		    ok(defined $project, "project object defined");
 		    is($project->external_id, '1970-Smith-test', "external id");
-		    like($project->stable_id, qr/^VBP\d+$/, "stable ID looks ok");
+		    ok($projects->looks_like_stable_id($project->stable_id), "stable ID looks ok");
 
 		    my $project2 = $projects->create
 		      ({
 			name => 'test project unique name 12345',
 			description => 'should not exist',
-			projectprops => [ { type => $proj_extID_type,
-					    value => '1970-Smith-test2',
-					    rank => 0
-					  } ]
 		       });
+		    $project2->external_id('1970-Smith-test2');
 
 		    like($project2->stable_id, qr/^VBP\d+$/, "second stable ID looks ok");
 		    isnt($project->stable_id, $project2->stable_id, "two project stable IDs are different");
@@ -45,13 +39,10 @@ my $result =
 		      ({
 			name => 'test project unique name 0000',
 			description => 'should not exist',
-			projectprops => [ { type => $proj_extID_type,
-					    value => '1970-Smith-test3',
-					    rank => 0
-					  } ]
 		       });
+		    $project3->external_id('1970-Smith-test3');
 
-		    like($project3->stable_id, qr/^VBP\d+$/, "third stable ID looks ok");
+		    ok($projects->looks_like_stable_id($project3->stable_id), "third stable ID looks ok");
 		    isnt($project3->stable_id, $project2->stable_id, "second and third are different");
 
 		    is($project3->stable_id, $project3->stable_id, "two calls return same stable id");
@@ -66,11 +57,8 @@ my $result =
 		      ({
 			name => 'test project unique name 0000',
 			description => 'should not exist',
-			projectprops => [ { type => $proj_extID_type,
-					    value => '1970-Smith-test3',
-					    rank => 0
-					  } ]
 		       });
+		    $project3b->external_id('1970-Smith-test3');
 
 		    is($stable_id3, $project3b->stable_id, "deleted and recreated project has same stable id");
 

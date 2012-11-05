@@ -1,0 +1,3 @@
+Sample Name	Assay Name	Protocol REF	Characteristics [Organism]	Term Source REF	Term Accession Number	Raw Data File
+SM-NEW1	SM-NEW1.spid1	species_identification	Anopheles gambiae M	MIRO	40003235	
+SM-NEW2	SM-NEW2.spid1	species_identification	Anopheles gambiae M	MIRO	40003235	

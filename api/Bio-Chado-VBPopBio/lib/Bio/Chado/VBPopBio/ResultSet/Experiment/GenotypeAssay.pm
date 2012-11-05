@@ -53,6 +53,17 @@ sub create_from_isatab {
   my ($self, $assay_name, $assay_data, $project, $ontologies, $study, $isa_parser) = @_;
   my $schema = $self->result_source->schema;
 
+  if ($self->looks_like_stable_id($assay_name)) {
+    my $existing_experiment = $self->find_by_stable_id($assay_name);
+    if (defined $existing_experiment) {
+      my $project_link = $existing_experiment->find_or_create_related('nd_experiment_projects',
+								      { project => $project,
+								      });
+      return $existing_experiment;
+    }
+    $schema->defer_exception("$assay_name looks like a stable ID but we couldn't find it in the database");
+  }
+
   # create the nd_experiment and stock linker type
   my $cvterms = $schema->cvterms;
   my $dbxrefs = $schema->dbxrefs;
@@ -60,6 +71,8 @@ sub create_from_isatab {
 
   # always create a new nd_experiment object
   my $genotype_assay = $self->create();
+  $genotype_assay->external_id($assay_name);
+  my $stable_id = $genotype_assay->stable_id($project);
 
   my $project_link = $genotype_assay->find_or_create_related('nd_experiment_projects',
 							     { project => $project,

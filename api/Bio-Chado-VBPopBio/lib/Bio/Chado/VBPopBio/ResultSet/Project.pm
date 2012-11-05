@@ -73,16 +73,11 @@ sub create_from_isatab {
   my $proj_extID_type = $schema->types->project_external_ID;
 
   #
-  # check for project with project external ID prop already
+  # check for project with project external ID already
   # (has been tested, but is not in a test suite)
   #
-  my $existing_projects = $self->search_related
-    ('projectprops', { type_id => $proj_extID_type->id,
-		       value => $study_external_id,
-		     })->search_related('project');
-
   croak "A project is already loaded with external ID '$study_external_id' - aborting."
-    if ($existing_projects->count());
+    if ($self->find_by_external_id($study_external_id));
 
   #
   # now create the project object
@@ -91,12 +86,8 @@ sub create_from_isatab {
   my $project = $self->create( {
 				name => $study_title,
 				description => $study_description,
-				projectprops => [ { type => $proj_extID_type,
-						    value => $study_external_id,
-						    rank => 0
-						  } ]
 			       } );
-
+  $project->external_id($study_external_id);
 
   warn "TO DO: project study factors\n";
 
@@ -158,7 +149,7 @@ sub create_from_isatab {
     if (defined $fc_data) {
       if (defined(my $sample_data = $fc_data->{samples}{$sample_id})) {
 	while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
-	  $field_collections{$assay_name} ||= $schema->field_collections->create_from_isatab($assay_data, $project, $ontologies, $study);
+	  $field_collections{$assay_name} ||= $schema->field_collections->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study);
 	  # link each field collection (newly created or already existing) to the stock
 	  $field_collections{$assay_name}->add_to_stocks($stock, { type => $assay_creates_stock }) ;
 	  # you could have added linker props with the following inside the second argument
@@ -173,7 +164,7 @@ sub create_from_isatab {
     if (defined $si_data) {
       if (defined(my $sample_data = $si_data->{samples}{$sample_id})) {
 	while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
-	  $species_identification_assays{$assay_name} ||= $schema->species_identification_assays->create_from_isatab($assay_data, $project, $ontologies, $study);
+	  $species_identification_assays{$assay_name} ||= $schema->species_identification_assays->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study);
 	  $species_identification_assays{$assay_name}->add_to_stocks($stock, { type => $assay_uses_stock });
 	  # this assay also 'produces' a stock (which contains the organism information)
 	  # but that is linked within ResultSet::SpeciesIdentificationAssay
@@ -189,7 +180,7 @@ sub create_from_isatab {
       if (defined(my $sample_data = $ga_data->{samples}{$sample_id})) {
 	while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
 	  $genotype_assays{$assay_name} ||= $schema->genotype_assays->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study, $parser);
-	  $genotype_assays{$assay_name}->add_to_stocks($stock, { type => $assay_uses_stock });
+  $genotype_assays{$assay_name}->add_to_stocks($stock, { type => $assay_uses_stock });
 	}
       } else {
 	# need a warning for missing assay data?
@@ -274,6 +265,17 @@ sub find_by_external_id {
   }
 
   return undef;
+}
+
+=head2 looks_like_stable_id
+
+check to see if VBP\d{7}
+
+=cut
+
+sub looks_like_stable_id {
+  my ($self, $id) = @_;
+  return $id =~ /^VBP\d{7}$/;
 }
 
 =head1 AUTHOR
