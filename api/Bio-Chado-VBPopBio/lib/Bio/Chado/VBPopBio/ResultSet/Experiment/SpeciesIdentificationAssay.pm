@@ -31,7 +31,7 @@ sub new {
 
 =head2 create_from_isatab
 
- Usage: $species_identification_assays->create_from_isatab($isatab_assay_data, $project, $ontologies, $study);
+ Usage: $species_identification_assays->create_from_isatab($assay_name, $isatab_assay_data, $project, $ontologies, $study);
 
  Desc: This method creates a stock object from the isatab assay sample hashref
  Ret : a new Experiment::SpeciesIdentificationAssay row (is a NdExperiment)
@@ -43,19 +43,28 @@ sub new {
 =cut
 
 sub create_from_isatab {
-  my ($self, $assay_data, $project, $ontologies, $study) = @_;
+  my ($self, $assay_name, $assay_data, $project, $ontologies, $study) = @_;
   my $schema = $self->result_source->schema;
-  my $cvterms = $schema->cvterms;
+
+  if ($self->looks_like_stable_id($assay_name)) {
+    my $existing_experiment = $self->find_by_stable_id($assay_name);
+    if (defined $existing_experiment) {
+      $existing_experiment->add_to_projects($project);
+      return $existing_experiment;
+    }
+    $schema->defer_exception("$assay_name looks like a stable ID but we couldn't find it in the database");
+  }
 
   # create the nd_experiment and stock linker type
+  my $cvterms = $schema->cvterms;
 
   # always create a new nd_experiment object
   my $species_identification_assay = $self->create();
+  $species_identification_assay->external_id($assay_name);
+  my $stable_id = $species_identification_assay->stable_id($project);
 
-  my $project_link = $species_identification_assay->find_or_create_related('nd_experiment_projects',
-							     { project => $project,
-							     });
-
+  # add it to the project
+  $species_identification_assay->add_to_projects($project);
 
   $species_identification_assay->add_to_protocols_from_isatab($assay_data->{protocols}, $ontologies, $study);
 

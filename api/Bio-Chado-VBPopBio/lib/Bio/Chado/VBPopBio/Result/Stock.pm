@@ -25,6 +25,23 @@ Stock object with extra convenience functions
     $stock = $schema->stocks->find({uniquename => 'Anopheles subpictus Sri Lanka 2003-1'});
     $experiments = $stock->experiments();
 
+=head1 RELATIONSHIPS
+
+=head2 project_stocks
+
+related virtual object/table: Bio::Chado::VBPopBio::Result::Linker::ProjectStock
+
+see also methods add_to_projects and projects
+
+=cut
+
+__PACKAGE__->has_many(
+  "project_stocks",
+  "Bio::Chado::VBPopBio::Result::Linker::ProjectStock",
+  { "foreign.stock_id" => "self.stock_id" },
+  { cascade_copy => 0, cascade_delete => 0 },
+);
+
 =head1 SUBROUTINES/METHODS
 
 =head2 experiments
@@ -97,15 +114,47 @@ sub experiments_by_type {
   return $self->experiments->search({ 'nd_experiment.type_id' => $type->cvterm_id });
 }
 
+=head2 add_to_projects
+
+there is no project_stocks relationship in Chado so we have a nasty
+hack using projectprops with a special type and a negative rank
+
+returns the projectprop
+
+=cut
+
+
+sub add_to_projects {
+  my ($self, $project) = @_;
+  my $schema = $self->result_source->schema;
+  my $link_type = $schema->types->project_stock_link;
+
+  return $schema->resultset('Projectprop')->find_or_create(
+				       { project_id => $project->id,
+					 type => $link_type,
+					 value => undef,
+					 rank => -$self->id
+				       } );
+}
+
 =head2 projects
 
-convenience search distinct for all related projects
+convenience search for all related projects
 
 =cut
 
 sub projects {
   my ($self) = @_;
-  return $self->experiments->search_related('nd_experiment_projects')->search_related('project', {}, { distinct=>1 });
+  my $link_type = $self->result_source->schema->types->project_stock_link;
+
+  return $self->search_related('project_stocks',
+			       {
+				# no search terms
+			       },
+			       {
+				bind => [ $link_type->id ],
+			       }
+			      )->search_related('project');
 }
 
 =head2 external_id

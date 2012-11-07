@@ -6,6 +6,7 @@ __PACKAGE__->subclass({
 		       cvterm => 'Bio::Chado::VBPopBio::Result::Cvterm',
 		       dbxrefprops => 'Bio::Chado::VBPopBio::Result::Dbxrefprop',
 		       stocks => 'Bio::Chado::VBPopBio::Result::Stock',
+		       nd_experiment_dbxrefs => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentDbxref',
 		       #
 		       # MORE relationships need to be added here
 		       #

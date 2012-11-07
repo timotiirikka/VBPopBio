@@ -3,7 +3,7 @@ package Bio::Chado::VBPopBio::Result::Phenotype;
 use base 'Bio::Chado::Schema::Result::Phenotype::Phenotype';
 __PACKAGE__->load_components('+Bio::Chado::VBPopBio::Util::Subclass');
 __PACKAGE__->subclass({
-		       nd_experiment_phenotypes => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentStock',
+		       nd_experiment_phenotypes => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentPhenotype',
 		       assay => 'Bio::Chado::VBPopBio::Result::Cvterm',
 		       attr => 'Bio::Chado::VBPopBio::Result::Cvterm',
 		       observable => 'Bio::Chado::VBPopBio::Result::Cvterm',
