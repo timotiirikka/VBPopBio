@@ -95,6 +95,41 @@ sub search_on_properties_cv_acc {
 }
 
 
+=head2 find_by_stable_id
+
+returns a single result with the stable id
+
+TO DO: describe failure modes (currently just returns undef if not found or ambiguous dbxrefs)
+
+=cut
+
+sub find_by_stable_id {
+  my ($self, $stable_id) = @_;
+
+  my $schema = $self->result_source->schema;
+  my $db = $schema->dbs->find_or_create({ name => 'VBA' });
+
+  my $search = $db->dbxrefs->search({ accession => $stable_id });
+
+  if ($search->count == 1 && $search->first->nd_experiment_dbxrefs->count == 1) {
+    return $search->first->nd_experiment_dbxrefs->first->nd_experiment;
+  }
+  return undef;
+}
+
+=head2 looks_like_stable_id
+
+arg: ID
+
+returns true if it matches VBA\d+
+
+=cut
+
+sub looks_like_stable_id {
+  my ($self, $id) = @_;
+  return $id =~ /^VBA\d{7}$/;
+}
+
 =head1 AUTHOR
 
 VectorBase, C<< <info at vectorbase.org> >>
