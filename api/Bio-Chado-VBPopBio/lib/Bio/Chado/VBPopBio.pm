@@ -213,7 +213,7 @@ sub protocols {
 
 sub genotypes {
   my $self = shift;
-  return $self->resultset('Genetic::Genotype');
+  return $self->resultset('Genotype');
 }
 
 =head2 phenotypes

@@ -58,9 +58,7 @@ sub create_from_isatab {
   if ($self->looks_like_stable_id($assay_name)) {
     my $existing_experiment = $self->find_by_stable_id($assay_name);
     if (defined $existing_experiment) {
-      my $project_link = $existing_experiment->find_or_create_related('nd_experiment_projects',
-								      { project => $project,
-								      });
+      $existing_experiment->add_to_projects($project);
       return $existing_experiment;
     }
     $schema->defer_exception("$assay_name looks like a stable ID but we couldn't find it in the database");
@@ -77,6 +75,9 @@ sub create_from_isatab {
   my $field_collection = $self->create({ nd_geolocation => $geolocation });
   $field_collection->external_id($assay_name);
   my $stable_id = $field_collection->stable_id($project);
+
+  # link it to the project
+  $field_collection->add_to_projects($project);
 
   # add the protocols
   $field_collection->add_to_protocols_from_isatab($assay_data->{protocols}, $ontologies, $study);
@@ -139,11 +140,6 @@ sub create_from_isatab {
 
   # also add temperature, etc
   # also add nd_experiment_contacts
-
-  # link it to the project (could also be done the "short cut" way)
-  my $project_link = $field_collection->find_or_create_related('nd_experiment_projects',
-			     { project => $project,
-			     });
 
   return $field_collection;
 }

@@ -1,4 +1,4 @@
-use Test::More tests => 8;
+use Test::More tests => 11;
 
 #
 # tests experiment/assay stable IDs
@@ -62,6 +62,13 @@ my $result =
 		    # see if we can assign a stable id via project
 		    my $expt1_stable_id = $experiment1->stable_id($project);
 		    ok($experiments->looks_like_stable_id($expt1_stable_id), "stable ID looks ok");
+
+		    # test some project/experiment linkage
+		    is($project->experiments->count, 0, "project has no expts");
+		    $project->add_to_experiments($experiment1);
+		    is($project->experiments->count, 1, "project has 1 expt");
+		    $experiment2->add_to_projects($project);
+		    is($project->experiments->count, 2, "now has two");
 
 		    # second stable id should be different to first
 		    isnt($expt1_stable_id, $experiment2->stable_id($project), "expts1+2 different IDs");

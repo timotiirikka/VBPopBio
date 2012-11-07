@@ -3,7 +3,7 @@ package Bio::Chado::VBPopBio::Result::Genotype;
 use base 'Bio::Chado::Schema::Result::Genetic::Genotype';
 __PACKAGE__->load_components('+Bio::Chado::VBPopBio::Util::Subclass');
 __PACKAGE__->subclass({
-		       nd_experiment_genotypes => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentStock',
+		       nd_experiment_genotypes => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentGenotype',
 		       genotypeprops => 'Bio::Chado::VBPopBio::Result::Genotypeprop',
 		       type => 'Bio::Chado::VBPopBio::Result::Cvterm',
 		      });

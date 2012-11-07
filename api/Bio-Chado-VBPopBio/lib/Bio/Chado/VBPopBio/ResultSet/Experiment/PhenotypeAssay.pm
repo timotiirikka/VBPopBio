@@ -56,9 +56,7 @@ sub create_from_isatab {
   if ($self->looks_like_stable_id($assay_name)) {
     my $existing_experiment = $self->find_by_stable_id($assay_name);
     if (defined $existing_experiment) {
-      my $project_link = $existing_experiment->find_or_create_related('nd_experiment_projects',
-								      { project => $project,
-								      });
+      $existing_experiment->add_to_projects($project);
       return $existing_experiment;
     }
     $schema->defer_exception("$assay_name looks like a stable ID but we couldn't find it in the database");
@@ -74,16 +72,11 @@ sub create_from_isatab {
   $phenotype_assay->external_id($assay_name);
   my $stable_id = $phenotype_assay->stable_id($project);
 
-  my $project_link = $phenotype_assay->find_or_create_related('nd_experiment_projects',
-							     { project => $project,
-							     });
-
-
-
+  # add it to the project
+  $phenotype_assay->add_to_projects($project);
 
   # add the protocols
   $phenotype_assay->add_to_protocols_from_isatab($assay_data->{protocols}, $ontologies, $study);
-
 
   # load the phenotype data from the phenote file(s)
   foreach my $phenote_file_name (keys %{$assay_data->{raw_data_files}}) {

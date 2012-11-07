@@ -316,6 +316,8 @@ sub multiprops {
 there is no project_stocks relationship in Chado so we have a nasty
 hack using projectprops with a special type and a negative rank
 
+usage: $project->add_to_stocks($stock_object);
+
 returns the projectprop
 
 =cut
@@ -350,6 +352,21 @@ sub stocks {
 			      )->search_related('stock');
 }
 
+
+=head2 add_to_experiments
+
+wrapper for add_to_nd_experiments
+
+usage $project->add_to_experiments($experiment_object);
+
+see experiments()
+
+=cut
+
+sub add_to_experiments {
+  my ($self, @args) = @_;
+  return $self->add_to_nd_experiments(@args);
+}
 
 =head2 as_data_structure
 

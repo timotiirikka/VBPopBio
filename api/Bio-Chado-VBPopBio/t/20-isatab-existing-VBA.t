@@ -1,4 +1,4 @@
-use Test::More tests => 5;
+use Test::More tests => 7;
 
 use strict;
 use JSON;
@@ -27,6 +27,9 @@ $schema->txn_do_deferred(
 		  isnt($stock1->stable_id, $stock2->stable_id, "different stable ids");
 		  # the two stocks should have the same field collection
 		  is($stock1->field_collections->first->stable_id, $stock2->field_collections->first->stable_id, "same field collection");
+
+		  is($project2->field_collections->count, 1, "project2 only one field collection");
+		  isnt($project1->field_collections->count, 1, "project1 doesn't have one field collection");
 
 		  is(scalar(@{$schema->{deferred_exceptions}}), 0, "no deferred exceptions");
 

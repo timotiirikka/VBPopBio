@@ -116,6 +116,7 @@ sub create_from_isatab {
     while (my ($sample_id, $sample_data) = each %{$source_data->{samples}}) {
       my $stock = $stocks->find_or_create_from_isatab($sample_id, $sample_data, $project, $ontologies, $study);
       $stocks{$sample_id} = $stock;
+      $project->add_to_stocks($stock);
     }
   }
 
@@ -180,7 +181,7 @@ sub create_from_isatab {
       if (defined(my $sample_data = $ga_data->{samples}{$sample_id})) {
 	while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
 	  $genotype_assays{$assay_name} ||= $schema->genotype_assays->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study, $parser);
-  $genotype_assays{$assay_name}->add_to_stocks($stock, { type => $assay_uses_stock });
+	  $genotype_assays{$assay_name}->add_to_stocks($stock, { type => $assay_uses_stock });
 	}
       } else {
 	# need a warning for missing assay data?
