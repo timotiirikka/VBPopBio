@@ -27,17 +27,17 @@ Stock object with extra convenience functions
 
 =head1 RELATIONSHIPS
 
-=head2 project_stocks
+=head2 stock_projects
 
-related virtual object/table: Bio::Chado::VBPopBio::Result::Linker::ProjectStock
+related virtual object/table: Bio::Chado::VBPopBio::Result::Linker::StockProject
 
 see also methods add_to_projects and projects
 
 =cut
 
 __PACKAGE__->has_many(
-  "project_stocks",
-  "Bio::Chado::VBPopBio::Result::Linker::ProjectStock",
+  "stock_projects",
+  "Bio::Chado::VBPopBio::Result::Linker::StockProject",
   { "foreign.stock_id" => "self.stock_id" },
   { cascade_copy => 0, cascade_delete => 0 },
 );
@@ -117,9 +117,9 @@ sub experiments_by_type {
 =head2 add_to_projects
 
 there is no project_stocks relationship in Chado so we have a nasty
-hack using projectprops with a special type and a negative rank
+hack using stockprops and projectprops with a special type and a negative rank
 
-returns the projectprop
+returns the stockprop
 
 =cut
 
@@ -129,12 +129,19 @@ sub add_to_projects {
   my $schema = $self->result_source->schema;
   my $link_type = $schema->types->project_stock_link;
 
-  return $schema->resultset('Projectprop')->find_or_create(
+  my $projectprop = $schema->resultset('Projectprop')->find_or_create(
 				       { project_id => $project->id,
 					 type => $link_type,
 					 value => undef,
 					 rank => -$self->id
 				       } );
+
+  return $self->find_or_create_related('stockprops',
+				       { type => $link_type,
+					 value => undef,
+					 rank => -$project->id
+				       } );
+
 }
 
 =head2 projects
@@ -147,7 +154,7 @@ sub projects {
   my ($self) = @_;
   my $link_type = $self->result_source->schema->types->project_stock_link;
 
-  return $self->search_related('project_stocks',
+  return $self->search_related('stock_projects',
 			       {
 				# no search terms
 			       },
