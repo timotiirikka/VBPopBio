@@ -58,8 +58,6 @@ my $result =
 
 		    $project->add_to_stocks($new_stock2);
 		    my $stocks2 = $project->stocks;
-my $refs = $stocks2->as_query;
-warn $$refs->[0];
 		    isa_ok($stocks2, "Bio::Chado::VBPopBio::ResultSet::Stock", "got stock(s)");
 		    is($stocks2->count, 2, "project has two stocks now");
 
@@ -74,9 +72,6 @@ warn $$refs->[0];
 
 
 		    my $projects2 = $new_stock2->projects;
-my $ref = $projects2->as_query;
-warn $$ref->[0];
-
 		    isa_ok($projects2, "Bio::Chado::VBPopBio::ResultSet::Project", "stock got projects");
 		    is($projects2->count, 2, "stock got 2 projects");
 
