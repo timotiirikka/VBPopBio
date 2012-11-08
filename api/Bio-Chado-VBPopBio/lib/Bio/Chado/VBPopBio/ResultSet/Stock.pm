@@ -252,7 +252,7 @@ sub projects {
   my ($self) = @_;
   my $link_type = $self->result_source->schema->types->project_stock_link;
 
-  return $self->search_related('project_stocks',
+  return $self->search_related('stock_projects',
 			       {
 				# no search terms
 			       },
