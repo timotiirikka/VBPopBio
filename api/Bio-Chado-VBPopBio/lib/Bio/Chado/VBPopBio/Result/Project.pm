@@ -314,7 +314,7 @@ sub multiprops {
 =head2 add_to_stocks
 
 there is no project_stocks relationship in Chado so we have a nasty
-hack using projectprops with a special type and a negative rank
+hack using projectprops AND stockprops with a special type and a negative rank
 
 usage: $project->add_to_stocks($stock_object);
 
@@ -324,7 +324,16 @@ returns the projectprop
 
 sub add_to_stocks {
   my ($self, $stock) = @_;
-  my $link_type = $self->result_source->schema->types->project_stock_link;
+  my $schema = $self->result_source->schema;
+  my $link_type = $schema->types->project_stock_link;
+
+  # add the "reverse relationship" from stock to project first
+  my $stockprop = $schema->resultset('Stockprop')->find_or_create(
+				       { stock_id => $stock->id,
+					 type => $link_type,
+					 value => undef,
+					 rank => -$self->id
+				       } );
 
   return $self->find_or_create_related('projectprops',
 				       { type => $link_type,
