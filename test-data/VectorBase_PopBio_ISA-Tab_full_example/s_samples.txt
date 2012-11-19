@@ -1,0 +1,2 @@
+Source Name	Sample Name	Description	Comment [something]	Material Type	Term Source REF	Term Accession Number	Characteristics [Organism]	Term Source REF	Term Accession Number	Factor Value [STRAIN]	Term Source REF	Term Accession Number
+Source01	Sample01	First sample of many	not loaded yet	whole organism	EFO	0002906	Anopheles gambiae	NCBITaxon	7165	M		
