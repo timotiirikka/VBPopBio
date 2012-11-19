@@ -1,7 +1,7 @@
 package VBPopBioREST;
 use Dancer::Plugin::DBIC 'schema';
 use Dancer ':syntax';
-use lib '../api';
+use lib '../api/Bio-Chado-VBPopBio/lib';
 use Bio::Chado::VBPopBio;
 
 our $VERSION = '0.1';
