@@ -1,4 +1,4 @@
-Source Name	Sample Name	Description	Comment [aspect X]	Material Type	Term Source REF	Term Accession Number	Characteristics [Organism (unsupported)]	Term Source REF	Term Accession Number	Factor Value [STRAIN]	Term Source REF	Term Accession Number
+Source Name	Sample Name	Description	Comment [aspect X]	Material Type	Term Source REF	Term Accession Number	Characteristics [Organism]	Term Source REF	Term Accession Number	Factor Value [STRAIN]	Term Source REF	Term Accession Number
 SM-NRUE	SM-NRUE			whole organism	EFO	0002906	Anopheles gambiae	NCBITaxon	7165	M
 SM-NRUF	SM-NRUF			whole organism	EFO	0002906	Anopheles gambiae	NCBITaxon	7165	M
 SM-NRUG	SM-NRUG			whole organism	EFO	0002906	Anopheles gambiae	NCBITaxon	7165	M
