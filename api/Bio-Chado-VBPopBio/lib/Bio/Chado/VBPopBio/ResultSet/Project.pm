@@ -122,18 +122,12 @@ sub create_from_isatab {
 
   # add nd_experiments for stocks (and link these to project)
 
-  my $assays = $study->{study_assay_lookup};
-  # this lookup is new to Bio::Parser::ISATab on 13 April 2011 on github
-  croak "missing study_assay_lookup - need to update ISATab parser?" unless (defined $assays);
+  my $assays = $study->{study_assays};  # array reference
 
-  #
-  # add various nd_experiments for each stock
-  #
-
-  my $fc_data = $assays->{"field collection"}; my %field_collections;
-  my $si_data = $assays->{"species identification assay"};   my %species_identification_assays;
-  my $ga_data = $assays->{"genotype assay"};   my %genotype_assays;
-  my $pa_data = $assays->{"phenotype assay"};  my %phenotype_assays;
+  my %field_collections;
+  my %species_identification_assays;
+  my %genotype_assays;
+  my %phenotype_assays;
 
   my $assay_creates_stock = $cvterms->create_with({ name => 'assay creates stock', # discuss this more
 						    cv => 'VBcv',
@@ -146,64 +140,59 @@ sub create_from_isatab {
   # for each stock that we already added
   while (my ($sample_id, $stock) = each %stocks) {
 
-    # FIELD COLLECTION
-    if (defined $fc_data) {
-      if (defined(my $sample_data = $fc_data->{samples}{$sample_id})) {
-	while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
-	  $field_collections{$assay_name} ||= $schema->field_collections->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study);
-	  # link each field collection (newly created or already existing) to the stock
-	  $field_collections{$assay_name}->add_to_stocks($stock, { type => $assay_creates_stock }) ;
-	  # you could have added linker props with the following inside the second argument
-	  # nd_experiment_stockprops => [ { type => $some_cvterm, value => 77 } ]
+    foreach my $assay (@$assays) {
+
+      # FIELD COLLECTION
+      if ($assay->{study_assay_measurement_type} eq 'field collection') {
+	if (defined(my $sample_data = $assay->{samples}{$sample_id})) {
+	  while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
+	    $field_collections{$assay_name} ||= $schema->field_collections->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study);
+	    # link each field collection (newly created or already existing) to the stock
+	    $field_collections{$assay_name}->add_to_stocks($stock, { type => $assay_creates_stock }) ;
+	    # you could have added linker props with the following inside the second argument
+	    # nd_experiment_stockprops => [ { type => $some_cvterm, value => 77 } ]
+	  }
+	} else {
+	  # need a warning for missing assay data for a particular sample?
+	  # add below for other assay types too if needed!
 	}
-      } else {
-	# need a warning for missing assay data?
       }
-    }
 
-    # SPECIES IDENTIFICATION ASSAY
-    if (defined $si_data) {
-      if (defined(my $sample_data = $si_data->{samples}{$sample_id})) {
-	while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
-	  $species_identification_assays{$assay_name} ||= $schema->species_identification_assays->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study);
-	  $species_identification_assays{$assay_name}->add_to_stocks($stock, { type => $assay_uses_stock });
-	  # this assay also 'produces' a stock (which contains the organism information)
-	  # but that is linked within ResultSet::SpeciesIdentificationAssay
+      # SPECIES IDENTIFICATION ASSAY
+      if ($assay->{study_assay_measurement_type} eq 'species identification assay') {
+	if (defined(my $sample_data = $assay->{samples}{$sample_id})) {
+	  while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
+	    $species_identification_assays{$assay_name} ||= $schema->species_identification_assays->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study);
+	    $species_identification_assays{$assay_name}->add_to_stocks($stock, { type => $assay_uses_stock });
+	    # this assay also 'produces' a stock (which contains the organism information)
+	    # but that is linked within ResultSet::SpeciesIdentificationAssay
+	  }
 	}
-      } else {
-	# need a warning for missing assay data?
       }
-    }
 
 
-    # GENOTYPE ASSAY
-    if (defined $ga_data) {
-      if (defined(my $sample_data = $ga_data->{samples}{$sample_id})) {
-	while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
-	  $genotype_assays{$assay_name} ||= $schema->genotype_assays->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study, $parser);
-	  $genotype_assays{$assay_name}->add_to_stocks($stock, { type => $assay_uses_stock });
+      # GENOTYPE ASSAY
+      if ($assay->{study_assay_measurement_type} eq 'genotype assay') {
+	if (defined(my $sample_data = $assay->{samples}{$sample_id})) {
+	  while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
+	    $genotype_assays{$assay_name} ||= $schema->genotype_assays->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study, $parser);
+	    $genotype_assays{$assay_name}->add_to_stocks($stock, { type => $assay_uses_stock });
+	  }
 	}
-      } else {
-	# need a warning for missing assay data?
       }
-    }
 
-    # PHENOTYPE ASSAY
-    if (defined $pa_data) {
-      if (defined(my $sample_data = $pa_data->{samples}{$sample_id})) {
-	while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
-	  $phenotype_assays{$assay_name} ||= $schema->phenotype_assays->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study, $parser);
-	  $phenotype_assays{$assay_name}->add_to_stocks($stock, { type => $assay_uses_stock });
+      # PHENOTYPE ASSAY
+      if ($assay->{study_assay_measurement_type} eq 'phenotype assay') {
+	if (defined(my $sample_data = $assay->{samples}{$sample_id})) {
+	  while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
+	    $phenotype_assays{$assay_name} ||= $schema->phenotype_assays->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study, $parser);
+	    $phenotype_assays{$assay_name}->add_to_stocks($stock, { type => $assay_uses_stock });
+	  }
 	}
-      } else {
-	# need a warning for missing assay data?
       }
     }
 
   }
-
-
-
 
 #  use Data::Dumper;
 #  $Data::Dumper::Indent = 1;
