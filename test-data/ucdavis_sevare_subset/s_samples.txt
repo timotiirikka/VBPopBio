@@ -1,4 +1,4 @@
-Source Name	Sample Name	Description	Comment [tube_num]	Material Type	Term Source REF	Term Accession Number	Characteristics [Organism (unsupported)]	Term Source REF	Term Accession Number
+Source Name	Sample Name	Description	Comment [tube_num]	Material Type	Term Source REF	Term Accession Number	Characteristics [Organism]	Term Source REF	Term Accession Number
 Sevare_2002-08-18_001	Sevare_2002-08-18_001		001	whole organism	EFO	0002906	Anopheles gambiae s.l.	NCBITaxon	44542
 Sevare_2002-08-18_002	Sevare_2002-08-18_002		002	whole organism	EFO	0002906	Anopheles gambiae s.l.	NCBITaxon	44542
 Sevare_2002-08-18_003	Sevare_2002-08-18_003		003	whole organism	EFO	0002906	Anopheles gambiae s.l.	NCBITaxon	44542

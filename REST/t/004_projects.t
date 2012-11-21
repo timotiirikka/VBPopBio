@@ -1,7 +1,7 @@
-use Test::More tests => 2;
+use Test::More tests => 3;
 use strict;
 use warnings;
-use lib '/home/ttiirikk/vbpopbio/api/Bio-Chado-VBPopBio/lib';
+use lib '../api/Bio-Chado-VBPopBio/lib';
 
 # the order is important
 use VBPopBioREST;
@@ -9,9 +9,19 @@ use Dancer::Test;
 
 use JSON;
 
-route_exists([ GET=>'/project/VBP0000001' ], "/project/VBP0000001 exists");
-my $response = dancer_response GET => '/project/VBP0000001';
+my $verbose = 0; # print JSON responses to terminal
 
-my $data = from_json $response->{content};
-is($data->{id}, "VBP0000001", "got the ID back");
+#
+# test projects/head
+#
 
+my ($url, $response, $json, $data);
+
+$url = "/projects/head";
+route_exists([ GET=>$url ], "$url route exists");
+$response = dancer_response GET => $url;
+$json = $response->{content};
+diag("$url response:\n$json") if ($verbose); # print diagnostics to terminal
+$data = eval { from_json $json };
+ok($data, "$url json decoding");
+is($data->{count}, 2, "$url number of projects check");
