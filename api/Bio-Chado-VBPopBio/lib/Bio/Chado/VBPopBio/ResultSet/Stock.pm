@@ -58,47 +58,50 @@ sub find_or_create_from_isatab {
 
   my $organism_data = $sample_data->{characteristics}{'Organism'};
 
+  if (defined $organism_data) {
   # see if organism has been provided from NCBI taxonomy or
-  if ((defined $organism_data->{term_source_ref} &&
-       ($organism_data->{term_source_ref} eq 'NCBITaxon' ||
-	$organism_data->{term_source_ref} eq 'MIRO')) && # MIRO organisms not loaded yet!
-      defined $organism_data->{term_accession_number} &&
-      length($organism_data->{term_accession_number})) {
+    if ((defined $organism_data->{term_source_ref} &&
+	 ($organism_data->{term_source_ref} eq 'NCBITaxon' ||
+	  $organism_data->{term_source_ref} eq 'MIRO')) && # MIRO organisms not loaded yet!
+	defined $organism_data->{term_accession_number} &&
+	length($organism_data->{term_accession_number})) {
 
-    my $dbname = $organism_data->{term_source_ref};
-    my $acc = $organism_data->{term_accession_number};
-    my $search = $organisms->search( { 'dbxref.accession' => $acc,
-				       'db.name' => $dbname,
-				     },
-				     { join => { 'organism_dbxrefs' => { 'dbxref' => 'db' } } });
+      my $dbname = $organism_data->{term_source_ref};
+      my $acc = $organism_data->{term_accession_number};
+      my $search = $organisms->search( { 'dbxref.accession' => $acc,
+					 'db.name' => $dbname,
+				       },
+				       {
+					join => { 'organism_dbxrefs' => { 'dbxref' => 'db' } } });
 
-    my $count = $search->count;
-    if ($count == 0) {
-      $schema->defer_exception("Can't find organism $dbname:$acc for sample $sample_name\n");
-      $stock_organism = $organisms->first;
-    } elsif ($count > 1) {
-      croak "Found multiple organisms with $dbname:$acc for sample $sample_name - something's wrong!";
-      $stock_organism = $organisms->first;
+      my $count = $search->count;
+      if ($count == 0) {
+	$schema->defer_exception("Can't find organism $dbname:$acc for sample $sample_name\n");
+	$stock_organism = $organisms->first;
+      } elsif ($count > 1) {
+	croak "Found multiple organisms with $dbname:$acc for sample $sample_name - something's wrong!";
+	$stock_organism = $organisms->first;
+      } else {
+	$stock_organism = $search->first;
+      }
     } else {
-      $stock_organism = $search->first;
-    }
-  } else {
-    # fallback to user provided text
-    my ($genus, $species) = split " ", $organism_data->{value}, 2;
-    $species = '' unless (defined $species);
+      # fallback to user provided text
+      my ($genus, $species) = split " ", $organism_data->{value}, 2;
+      $species = '' unless (defined $species);
 
-    #
-    # Do a few common MIRO to NCBITaxon conversions
-    #
-    ($genus, $species) = ('gambiae', 'species complex') if ($organism_data->{value} eq 'Anopheles gambiae sensu lato');
-    ($genus, $species) = ('Culex', '') if ($organism_data->{value} eq 'genus Culex');
+      #
+      # Do a few common MIRO to NCBITaxon conversions
+      #
+      ($genus, $species) = ('gambiae', 'species complex') if ($organism_data->{value} eq 'Anopheles gambiae sensu lato');
+      ($genus, $species) = ('Culex', '') if ($organism_data->{value} eq 'genus Culex');
 
-    if ($genus) {
-      $stock_organism = $organisms->find({ genus => $genus,
-					   species => $species,
-					 }) or $schema->defer_exception("Warning: Sample 'Characteristics [Organism]' genus-species <$genus>-<$species> not in db for sample '$sample_name'.");
+      if ($genus) {
+	$stock_organism = $organisms->find({ genus => $genus,
+					     species => $species,
+					   }) or $schema->defer_exception("Warning: Sample 'Characteristics [Organism]' genus-species <$genus>-<$species> not in db for sample '$sample_name'.");
+      }
+      # else permitted empty 'Characteristics [Organism]' column -> silently adds null organism to stock.
     }
-    # else permitted empty 'Characteristics [Organism]' column -> silently adds null organism to stock.
   }
 
   # first check to see if we have a sample stable ID that's already in the db

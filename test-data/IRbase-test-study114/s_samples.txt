@@ -1,4 +1,4 @@
-Source Name	Sample Name	Description	Material Type	Term Source REF	Term Accession Number	Characteristics [Organism (unsupported)]
+Source Name	Sample Name	Description	Material Type	Term Source REF	Term Accession Number	Characteristics [Organism]
 IRBS13015	IRBS13015		whole organism	EFO	0002906	Anopheles culicifacies
 IRBS13016	IRBS13016		whole organism	EFO	0002906	Anopheles culicifacies
 IRBS13017	IRBS13017		whole organism	EFO	0002906	Anopheles culicifacies
