@@ -1,0 +1,5 @@
+Sample	Assay	prop?	type ID	type Name	Description/Value
+Sample01	Sample01.ka1	1	SO:0000105	chromosome_arm	2L
+Sample01	Sample01.ka1	0	SO:1000047	paracentric_inversion	2La/a
+Sample01	Sample01.ka1	1	SO:0000105	chromosome_arm	2R
+Sample01	Sample01.ka1	0	SO:1000047	paracentric_inversion	2Rbc/+
