@@ -280,7 +280,7 @@ cvterms optionally ending in a free text value.
 
 This is more flexible than adding a cvalue column to all prop tables.
 
-Usage: $stock->add_multiprop($multiprop);
+Usage:  $stock->add_multiprop($multiprop);
 
 See also: Util::Multiprop (object) and Util::Multiprops (utility methods)
 
@@ -327,31 +327,24 @@ sub as_data_structure {
       name => $self->name,
       external_id => $self->external_id,
 
-      # make sure $depth won't go over the set level		
-      # no depth checks for some contained objects, such as organism, cvterms etc
-      # need to provide Result::Organism::as_data_structure
+      # make sure 'recursion' won't go too deep using $depth argument
+      # however, no depth checks for some contained objects, such as organism, cvterms etc
+      type => $self->type->as_data_structure,
 
-      # organism => $self->organism ? { $self->organism->get_columns } : 'NULL',
+      props => [ map { $_->as_data_structure } $self->multiprops ],
 
-      ($depth > 0) ? (experiments => [ map { $_->as_data_structure } $self->experiments ]) : (),
-      
-#
-# for the RC1  replace each type of experiment with:
-#
-#	  phenotype_assays => [ 
-#	      map { $_->as_data_structure } $self->phenotype_assays
-#	  ],
-#
-#	  and same for genotype_assays, field_collections, species_identification_assays
-#
-#	  $self->get_columns,  # we don't want this
-#
-#	  'dbxref.accession' => defined $self->dbxref_id ? $self->dbxref->db->name.':'.$self->dbxref->accession : 'N/A',
-#
-#	  organism => $self->organism ? { $self->organism->get_columns } : 'NULL',
-#
-#	  props => [ map { $_->as_data_structure } $self->multiprops ],
-#
+      # need to provide Result::Organism::as_data_structure:
+      # organism => $self->organism ? { $self->organism->as_data_structure } : 'NULL',
+
+      ($depth > 0) ? (
+		      field_collections => [ map { $_->as_data_structure($depth) } $self->field_collections ],
+		      species_identification_assays => [ map { $_->as_data_structure($depth) } $self->species_identification_assays ],
+		      genotype_assays => [ map { $_->as_data_structure($depth) } $self->genotype_assays ],
+		      phenotype_assays => [ map { $_->as_data_structure($depth) } $self->phenotype_assays ],
+		     )
+	  : (),
+
+
 	 };
 }
 

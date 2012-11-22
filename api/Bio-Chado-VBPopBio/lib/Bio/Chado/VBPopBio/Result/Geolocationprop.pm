@@ -11,6 +11,10 @@ __PACKAGE__->subclass({ nd_geolocation => 'Bio::Chado::VBPopBio::Result::Geoloca
 
 Bio::Chado::VBPopBio::Result::Geolocationprop
 
+IS THIS REQUIRED ANY MORE?
+
+Reconsider after adding multiprop functionality to Geolocation.
+
 =head1 SUBROUTINES/METHODS
 
 =head2 as_data_for_jsonref
