@@ -502,12 +502,14 @@ sub as_data_structure {
   $depth = INT_MAX unless (defined $depth);
 
   return {
-	  name => 'I AM AN EXPERIMENT',
-          description => 'I SHOULD BE SUBCLASSED',
+	  $self->basic_info,
+          warning => 'Warning: Experiment Result has not been sub-classed!',
 
-# 	  nd_geolocation => $self->nd_geolocation->as_data_structure,
-	  
-
+#
+# the following information might be useful for as_data_structure() in sub-classes (FieldCollection, etc)
+#
+# 	  nd_geolocation => $self->nd_geolocation->as_data_structure,  # only for field_collection
+#
 #	  genotypes => [ map {
 #	    { $_->get_columns,
 #		genotypeprops => [ map {
@@ -550,11 +552,21 @@ sub as_data_structure {
 	 };
 }
 
-=head2 as_data_for_jsonref
+=head2 basic_info (private/protected)
 
-returns json-like data with dojox.json.ref references
+returns hash of key/value pairs for Experiment base class
 
 =cut
+
+sub basic_info {
+  my ($self) = @_;
+
+  return (
+	  id => $self->stable_id,
+	  external_id => $self->external_id,
+	 );
+}
+
 
 =head1 AUTHOR
 
