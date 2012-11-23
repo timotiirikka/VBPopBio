@@ -11,6 +11,8 @@ Bio::Chado::VBPopBio::Util::Multiprop
   use aliased 'Bio::Chado::VBPopBio::Util::Multiprop';
   $multiprop = new Multiprop(cvterms => [ $cvterm1 => $cvterm2 => $cvterm3 ], value => 150);
 
+  SOP might be to add multiprops even where there is only one cvterm - for consistency!
+
 =head1 ATTRIBUTES
 
 =head2 cvterms

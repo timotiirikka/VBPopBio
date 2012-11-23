@@ -1,5 +1,6 @@
 package Bio::Chado::VBPopBio::Result::Experiment::FieldCollection;
 
+use POSIX;
 use base 'Bio::Chado::VBPopBio::Result::Experiment';
 __PACKAGE__->load_components(qw/+Bio::Chado::VBPopBio::Util::Subclass/);
 __PACKAGE__->subclass({ }); # must call this routine even if not setting up relationships.
@@ -15,15 +16,25 @@ Field collection
 
 =head1 SUBROUTINES/METHODS
 
-=head2 special
+=head2 as_data_structure
 
-Do something special for field collections
+provide data for JSONification
+
+  $data = $assay->as_data_structure($depth)
+
+if $depth is defined and less than or equal to zero, no child objects will be returned
 
 =cut
 
-sub special {
-  my ($self) = @_;
-  return 'I am SO special';
+sub as_data_structure {
+  my ($self, $depth) = @_;
+  $depth = INT_MAX unless (defined $depth);
+
+  return {
+	  $self->basic_info,
+	  geolocation => $self->nd_geolocation->as_data_structure,
+
+	 };
 }
 
 =head1 AUTHOR

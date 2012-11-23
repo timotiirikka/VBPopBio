@@ -2,6 +2,7 @@ package Bio::Chado::VBPopBio::ResultSet::Geolocation;
 
 use base 'DBIx::Class::ResultSet';
 use Carp;
+use aliased 'Bio::Chado::VBPopBio::Util::Multiprop';
 
 =head1 NAME
 
@@ -72,10 +73,7 @@ sub find_or_create_from_isatab {
 	# add the geolocationprop manually (BCS convenience function doesn't seem suitable here)
 	# maybe check for agreement between text provided and gaz_term->name?
 	# could be issues with international characters etc
-	$geolocation->find_or_create_related('nd_geolocationprops',
-					     { type => $gaz_term,
-					       # no value required (what about rank?)
-					     });
+	$geolocation->add_multiprop(Multiprop->new(cvterms => [ $gaz_term ]));
       } else {
 	# insert better error handling here
 	$schema->defer_exception_once("can't find GAZ:$site->{term_accession_number} for $site->{value}");
@@ -85,17 +83,13 @@ sub find_or_create_from_isatab {
     }
   }
 
-
   # load simple text (no GAZ because we should already have that for "leaf) gelocation props for
   foreach my $geotype (qw/village country county region district location locality province/) {
     my $value = $assay_data->{characteristics}{"Collection site $geotype"}{value};
-    if ($value) {
-      $geolocation->create_geolocationprops( { "collection site $geotype" => $value },
-					     {
-					      autocreate => 1,
-					      cv_name => 'VBcv',
-					     }
-					   );
+    my $gterm = $cvterms->find_by_name({ term_source_ref=>'VBcv',
+					 term_name => $geotype });
+    if ($value && $gterm) {
+      $geolocation->add_multiprop(Multiprop->new(cvterms => [ $gterm ], value => $value));
     }
   }
 
