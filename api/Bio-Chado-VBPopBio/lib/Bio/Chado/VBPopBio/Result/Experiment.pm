@@ -19,6 +19,9 @@ __PACKAGE__->subclass({ nd_experiment_stocks => 'Bio::Chado::VBPopBio::Result::L
 __PACKAGE__->typecast_column('type_id');
 __PACKAGE__->resultset_attributes({ order_by => 'nd_experiment_id' });
 
+
+use aliased 'Bio::Chado::VBPopBio::Util::Multiprops';
+
 =head1 NAME
 
 Bio::Chado::VBPopBio::Result::Experiment
@@ -564,6 +567,7 @@ sub basic_info {
   return (
 	  id => $self->stable_id,
 	  external_id => $self->external_id,
+          props => [ map { $_->as_data_structure } $self->multiprops ],
 	 );
 }
 
