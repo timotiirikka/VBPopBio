@@ -24,10 +24,8 @@ overloaded constructor adds default resultset filtering on field collection type
 
 sub new {
   my ($class, $source, $attribs) = @_;
-  if (keys %{$attribs} == 0) {
-    my $type = $source->schema->types->field_collection;
-    $attribs = { where => { 'type_id' => $type->cvterm_id } };
-  }
+  $attribs = {} unless $attribs;
+  $attribs->{where}{type_id} = $source->schema->types->field_collection->cvterm_id;
   return $class->SUPER::new($source, $attribs);
 }
 

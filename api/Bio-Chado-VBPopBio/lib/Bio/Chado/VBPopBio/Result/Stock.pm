@@ -43,6 +43,44 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+
+
+=head1 MANY-TO-MANY RELATIONSHIPS
+
+=head2 nd_experiments
+
+Type: many_to_many
+
+Returns a list of experiments
+
+Related object: L<Bio::Chado::Schema::Result::NaturalDiversity::NdExperiment>
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'nd_experiments',
+     'nd_experiment_stocks' => 'nd_experiment',
+    );
+
+=head2 dbxrefs
+
+Type: many_to_many
+
+Returns a list of dbxrefs
+
+Related object: L<Bio::Chado::Schema::Result::General::Dbxref>
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'dbxrefs',
+     'stock_dbxrefs' => 'dbxref',
+    );
+
+
+
 =head1 SUBROUTINES/METHODS
 
 =head2 experiments

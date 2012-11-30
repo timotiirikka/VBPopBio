@@ -19,6 +19,9 @@ __PACKAGE__->subclass({ nd_experiment_stocks => 'Bio::Chado::VBPopBio::Result::L
 __PACKAGE__->typecast_column('type_id');
 __PACKAGE__->resultset_attributes({ order_by => 'nd_experiment_id' });
 
+use aliased 'Bio::Chado::VBPopBio::Util::Multiprops';
+use aliased 'Bio::Chado::VBPopBio::Util::Multiprop';
+
 =head1 NAME
 
 Bio::Chado::VBPopBio::Result::Experiment
@@ -28,6 +31,140 @@ Bio::Chado::VBPopBio::Result::Experiment
 Experiment object with extra convenience functions.
 Specialised experiment classes can be found in the.
 Bio::Chado::VBPopBio::Result::Experiment::* namespace.
+
+=head1 MANY-TO-MANY RELATIONSHIPS
+
+=head2 stocks
+
+Type: many_to_many
+
+Returns a list of stocks
+
+Related object: Bio::Chado::Schema::Stock::Stock
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'stocks',
+     'nd_experiment_stocks' => 'stock',
+    );
+
+
+=head2 projects
+
+Type: many_to_many
+
+Returns a list of projects
+
+Related object: Bio::Chado::Schema::Result::Project::Project
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'projects',
+     'nd_experiment_projects' => 'project',
+    );
+
+=head2 nd_protocols
+
+Type: many_to_many
+
+Returns a list of nd_protocols
+
+Related object: Bio::Chado::Schema::Result::NaturalDiversity::NdProtocol
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'nd_protocols',
+     'nd_experiment_protocols' => 'nd_protocol',
+    );
+
+=head2 genotypes
+
+Type: many_to_many
+
+Returns a list of genotypes
+
+Related object: Bio::Chado::Schema::Result::Genetic::Genotype
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'genotypes',
+     'nd_experiment_genotypes' => 'genotype',
+    );
+
+=head2 phenotypes
+
+Type: many_to_many
+
+Returns a list of phenotypes
+
+Related object: Bio::Chado::Schema::Result::Phenotype::Phenotype
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'phenotypes',
+     'nd_experiment_phenotypes' => 'phenotype',
+    );
+
+=head2 contacts
+
+Type: many_to_many
+
+Returns a list of contacts
+
+Related object: Bio::Chado::Schema::Result::Contact::Contact
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'contacts',
+     'nd_experiment_contacts' => 'contact',
+    );
+
+=head2 dbxrefs
+
+Type: many_to_many
+
+Returns a list of dbxrefs
+
+Related object: Bio::Chado::Schema::Result::General::Dbxref
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'dbxrefs',
+     'nd_experiment_dbxrefs' => 'dbxref',
+    );
+
+=head2 pubs
+
+Type: many_to_many
+
+Returns a list of pubs (publications)
+
+Related object: Bio::Chado::Schema::Result::Pub::Pub
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'pubs',
+     'nd_experiment_pubs' => 'pub',
+    );
+
+
+
 
 
 =head1 SUBROUTINES/METHODS
@@ -118,7 +255,10 @@ sub add_to_protocols_from_isatab {
     while (my ($protocol_ref, $protocol_data) = each %{$protocols_data}) {
       my $protocol_info = $study->{study_protocol_lookup}{$protocol_ref};
 
-      croak "Protocol REF $protocol_ref not described in ISA-Tab" unless ($study->{study_protocol_lookup}{$protocol_ref});
+      unless ($study->{study_protocol_lookup}{$protocol_ref}) {
+	$schema->defer_exception("Protocol REF $protocol_ref not described in ISA-Tab.");
+	next;
+      }
 
 # now that protocols are mostly ontologised (in i_investigation.txt)
 # the description shouldn't be mandatory
@@ -149,7 +289,8 @@ sub add_to_protocols_from_isatab {
 						});
 
 
-
+# TO DO - add multiprops here
+warn "need multiprops for nd_protocol";
       if ($protocol_info->{study_protocol_description}) {
 	$protocol->create_nd_protocolprops( { description => $protocol_info->{study_protocol_description} },
 					    { cv_name => 'VBcv',
@@ -175,101 +316,65 @@ sub add_to_protocols_from_isatab {
 	  my $param_type_db = $protocol_info->{study_protocol_parameter_lookup}{$param_name}{study_protocol_parameter_name_term_source_ref};
 	  my $param_type_cvterm;
 	  if (length($param_type_acc) && $param_type_db) {
-	    $param_type_cvterm = $dbxrefs->find({ accession => $param_type_acc,
-						  'db.name' => $param_type_db },
-						{ join => 'db' })->cvterm;
-
+	    $param_type_cvterm = $cvterms->find_by_accession
+	      ({
+		term_source_ref => $param_type_db,
+		term_accession_number => $param_type_acc,
+	       });
+	    unless (defined $param_type_cvterm) {
+	      $schema->defer_exception("Cant find term '$param_type_db:$param_type_acc' for protocol parameter '$param_name'");
+	      $param_type_cvterm = $schema->types->placeholder;
+	    }
 	  } else {
+	    $schema->defer_exception("Protocol parameter '$param_name' has no ontology term");
 	    $param_type_cvterm = $cvterms->create_with({ name => $param_name,
 							 cv => 'VBcv',
 						       });
 	  }
 
 	  #
-	  # 2. find or create a temporary VBcv term for the parameter value
-	  # e.g. insecticide with MIRO term
-	  #      unit UO cvterm
-	  #      'parameter value' VBcv term
-	  my $param_value_cvterm;
-	  my $param_value = '';  # what to store in the prop's value field (would prefer undef!)
+	  # 2. find a cvterm for the parameter value,
+	  #    or text-value + unit cvterms
+	  #    or plain text value
+	  #
+	  # create a multiprop sentence and add it
+	  # (e.g. "insecticide permethrin" or "concentration mg/ml 100")
+	  #
+
+	  my @cvterm_sentence = ($param_type_cvterm);
+	  my $param_value; # free text or number
+
+	  # the param value is either a cvterm, or a text value with units or a text value
 	  if ($param_data->{term_source_ref} && length($param_data->{term_accession_number})) {
-	    $param_value_cvterm = $dbxrefs->find({ accession => $param_data->{term_accession_number},
-						   'db.name' => $param_data->{term_source_ref} },
-						 { join => 'db' })->cvterm;
-	    # $param_value stays unset - ignore any text value provided in ISA-Tab
-	  } elsif ($param_data->{unit} && $param_data->{unit}{term_source_ref} &&
-		   length($param_data->{unit}{term_accession_number})) {
-	    $param_value_cvterm = $dbxrefs->find({ accession => $param_data->{unit}{term_accession_number},
-						   'db.name' => $param_data->{unit}{term_source_ref} },
-						 { join => 'db' })->cvterm;
-	    $param_value = $param_data->{value};
-	  } else {
-	    $param_value_cvterm = $cvterms->create_with({ name => 'parameter value',
-							  cv => 'VBcv',
-							});
-	    $param_value = $param_data->{value};
-	  }
-
-	  #
-	  # 3. see if the protocol already has a prop for $param_type_cvterm
-	  #    if not, create a new positive rank for it and create the prop
-	  #
-
-	  my $rank;
-	  my $pp_search = $protocol->search_related('nd_protocolprops',
-						    { 'type_id' => $param_type_cvterm->cvterm_id });
-	  my $pp_count = $pp_search->count;
-	  if ($pp_count > 1) {
-	    croak $param_type_cvterm->name." is an nd_protocolprop with two ranks... fatal.";
-	  } elsif ($pp_count) {
-	    $rank = $pp_search->first->rank;
-	  } else {
-	    # search for positively ranked props
-	    # find out the next available rank
-	    $pp_search = $protocol->search_related('nd_protocolprops',
-						   { 'rank' => { '>' => 0 } });
-	    if ($pp_search->count) {
-	      $rank = $pp_search->get_column('rank')->max + 1;
-	    } else {
-	      $rank = 1;
+	    my $param_value_cvterm = $cvterms->find_by_accession($param_data);
+	    unless (defined $param_value_cvterm) {
+	      $schema->defer_exception("Can't find parameter value cvterm $param_data->{term_source_ref}:($param_data->{term_accession_number}");
+	      $param_value_cvterm = $schema->types->placeholder;
 	    }
+	    push @cvterm_sentence, $param_value_cvterm;
+	  } elsif (length($param_data->{value}) && $param_data->{unit}
+		   && $param_data->{unit}{term_source_ref} &&
+		   length($param_data->{unit}{term_accession_number})) {
+	    my $param_unit_cvterm = $cvterms->find_by_accession($param_data->{unit});
+	    unless (defined $param_unit_cvterm) {
+	      $schema->defer_exception("Can't find parameter value's unit cvterm: $param_data->{unit}{term_source_ref}:$param_data->{unit}{term_accession_number}");
+	      $param_unit_cvterm = $schema->types->placeholder;
+	    }
+	    push @cvterm_sentence, $param_unit_cvterm;
+	    $param_value = $param_data->{value};
+	  } elsif (length($param_data->{value})) {
+	    $param_value = $param_data->{value};
 	  }
-
-	  #
-	  # 4. add the protocolprop ($param_type_cvterm)
-	  #
-
-	  $protocol->find_or_create_related('nd_protocolprops',
-					    { type => $param_type_cvterm,
-					      rank => $rank });
-	  #
-	  # 5. add both terms as nd_experimentprops
-	  #    with the SAME RANK
-	  #
-
-	  $self->find_or_create_related('nd_experimentprops',
-					{ type => $param_type_cvterm,
-					  value => '',
-					  rank => $rank
-					});
-
-
-	  $self->find_or_create_related('nd_experimentprops',
-					{ type => $param_value_cvterm,
-					  value => $param_value,
-					  rank => $rank
-					});
+	  $self->add_multiprop(Multiprop->new(
+					      cvterms => \@cvterm_sentence,
+					      value => $param_value
+					     ));
 	}
       }
 
       push @protocols, $protocol;
-
-#      use Data::Dumper;
-#      warn Dumper("just added a protocol",  { $protocol->get_columns, props => [ map { { $_->get_columns } } $protocol->nd_protocolprops ] } );
     }
   }
-
-
 
   return @protocols;
 }

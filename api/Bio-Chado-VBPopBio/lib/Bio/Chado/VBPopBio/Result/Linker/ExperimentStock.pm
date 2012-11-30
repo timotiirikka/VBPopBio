@@ -17,6 +17,25 @@ Bio::Chado::VBPopBio::Result::Linker::ExperimentStock
 
 Wrapper class to maintain correct relationships between the VBPopBio objects.  You should not need to use this.
 
+=head1 MANY-TO-MANY RELATIONSHIPS
+
+=head2 dbxrefs
+
+Type: many_to_many
+
+Returns a list of dbxrefs
+
+Related object: Bio::Chado::Schema::Result::General::Dbxref
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'dbxrefs',
+     'nd_experiment_stock_dbxrefs' => 'dbxref',
+    );
+
+
 =head1 AUTHOR
 
 VectorBase, C<< <info at vectorbase.org> >>
