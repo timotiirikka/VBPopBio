@@ -1,2 +1,2 @@
-Sample Name	Assay Name	Protocol REF	Parameter Value [magnification]	Unit	Term Source REF	Term Accession Number	Raw Data File
-Sample01	Sample01.ka1	visual karyotyping	100	relative length	PATO	0000124	p_karyotypes.tab
+Sample Name	Assay Name	Protocol REF	Parameter Value [cell type]	Term Source REF	Term Accession Number	Parameter Value [time of day]	Raw Data File
+Sample01	Sample01.ka1	visual karyotyping	adult salivary gland	TGMA	0001804	morning	p_karyotypes.tab

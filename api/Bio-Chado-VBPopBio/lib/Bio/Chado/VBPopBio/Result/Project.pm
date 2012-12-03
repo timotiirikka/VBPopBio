@@ -39,6 +39,25 @@ __PACKAGE__->has_many(
   { cascade_copy => 0, cascade_delete => 0 },
 );
 
+=head1 MANY-TO-MANY RELATIONSHIPS
+
+=head2 nd_experiments
+
+Type: many_to_many
+
+Returns a resultset of nd_experiments
+
+Related object: Bio::Chado::Schema::NaturalDiversity::NdExperiment
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'nd_experiments',
+     'nd_experiment_projects' => 'nd_experiment',
+    );
+
+
 =head1 SUBROUTINES/METHODS
 
 =head2 experiments
@@ -95,6 +114,14 @@ sub species_identification_assays {
   my ($self) = @_;
   return $self->experiments_by_type($self->result_source->schema->types->species_identification_assay);
 }
+
+=head2 experiments_by_type
+
+arg: $cvterm
+
+returns a resultset filtered on type
+
+=cut
 
 sub experiments_by_type {
   my ($self, $type) = @_;

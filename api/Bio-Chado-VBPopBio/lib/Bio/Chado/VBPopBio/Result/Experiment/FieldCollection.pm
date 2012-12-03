@@ -37,6 +37,19 @@ sub as_data_structure {
 	 };
 }
 
+=head2 geolocation
+
+alias for nd_geolocation
+
+=cut
+
+sub geolocation {
+  my ($self, @args) = @_;
+  return $self->nd_geolocation(@args);
+}
+
+
+
 =head1 AUTHOR
 
 VectorBase, C<< <info at vectorbase.org> >>

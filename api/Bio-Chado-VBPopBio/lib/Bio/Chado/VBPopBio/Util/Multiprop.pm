@@ -71,11 +71,13 @@ sub as_data_structure {
 	 };
 }
 
-=head2 as_text
+=head2 as_string
+
+Simple string version of multiprop.  Comma separated cvterm names and optional free text value.
 
 =cut
 
-sub as_text {
+sub as_string {
   my $self = shift;
   return join ", ", (map { $_->name } $self->cvterms), defined $self->value ? ($self->value) : ();
 }
