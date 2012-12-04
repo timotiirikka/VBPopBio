@@ -1,6 +1,7 @@
 package VBPopBioREST;
 use Dancer::Plugin::DBIC 'schema';
 use Dancer ':syntax';
+#use lib '/home/maccallr/vectorbase/popgen/api-devel/Bio-Chado-Schema-git/Bio-Chado-Schema-0.10010/lib';
 use lib '../api/Bio-Chado-VBPopBio/lib';
 use Bio::Chado::VBPopBio;
 
@@ -96,12 +97,16 @@ get qr{/stocks(/head)?} => sub {
 
 get qr{/stock/(\w+)(/head)?} => sub {
     my ($id, $head) = splat;
-    my $stock = schema->stocks->find_by_stable_id($id);
-    if (defined $stock) {
+ 
+
+my $stock = schema->stocks->find_by_stable_id($id);
+if (defined $stock) {
 	return $stock->as_data_structure(defined $head ? 0 : undef);
     } else {
 	return { error_message => "can't find stock" };
     }
+
+ 
 };
 
 
@@ -156,7 +161,7 @@ get qr{/project/(\w+)/stocks(/head)?} => sub {
 #
 #};
 
-get qr{/stock/(\w+)(/projects)(/head)?} => sub {
+get qr{/stock/(\w+)/projects(/head)?} => sub {
     my ($id, $head) = splat;
     my $stock = schema->stocks->find_by_stable_id($id);
     
@@ -183,7 +188,7 @@ get qr{/stock/(\w+)(/projects)(/head)?} => sub {
 };
 
 
-get qr{/stock/(\w+)(/assays)} => sub {
+get qr{/stock/(\w+)/assays} => sub {
     my ($id) = splat;
     my $stock = schema->stocks->find_by_stable_id($id);
     
@@ -219,7 +224,8 @@ sub records_info {
 
     return (
 	start => $o + 1,
-	end => $l + $o,
+	end => $o + $l, 
+	
 	# have to do the following because $page->count returns page size
 	count => $page->pager->total_entries,
 	);
