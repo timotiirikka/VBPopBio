@@ -1,7 +1,6 @@
 package VBPopBioREST;
 use Dancer::Plugin::DBIC 'schema';
 use Dancer ':syntax';
-#use lib '/home/maccallr/vectorbase/popgen/api-devel/Bio-Chado-Schema-git/Bio-Chado-Schema-0.10010/lib';
 use lib '../api/Bio-Chado-VBPopBio/lib';
 use Bio::Chado::VBPopBio;
 

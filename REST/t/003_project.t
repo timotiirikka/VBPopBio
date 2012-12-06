@@ -1,4 +1,4 @@
-use Test::More tests => 39;
+use Test::More tests => 44;
 use strict;
 use warnings;
 use lib '../api/Bio-Chado-VBPopBio/lib';
@@ -84,6 +84,23 @@ ok($data, "$url json decoding");
 is($data->{count}, 60, "$url number of stocks check");
 is($data->{start}, 6, "$url starts at 6");
 is($data->{end}, 10, "$url ends at 10");
+
+
+# test request for final incomplete of stocks for project
+# (compare with https://preview.vectorbase.org/popbio/REST/project/140/stocks?o=20;l=20 )
+#
+$url = "/project/$project_id/stocks/head?o=40;l=40";
+route_exists([ GET=>$url ], "$url route exists");
+$response = dancer_response GET => $url;
+$json = $response->{content};
+diag("$url response:\n$json") if ($verbose); # print diagnostics to terminal
+$data = eval { from_json $json };
+ok($data, "$url json decoding");
+is($data->{count}, 60, "$url number of stocks check");
+is($data->{start}, 41, "$url starts at 41");
+is($data->{end}, 60, "$url ends at 60");
+
+
 
 #
 # the WHOLE project JSON (slower)

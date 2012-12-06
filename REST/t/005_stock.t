@@ -1,4 +1,4 @@
-use Test::More tests => 20;
+use Test::More tests => 23;
 use strict;
 use warnings;
 use lib '../api/Bio-Chado-VBPopBio/lib';
@@ -28,6 +28,9 @@ is($data->{id}, $stock_id, "$url ID check");
 is($data->{name}, "SM-NRUE", "$url name check");
 is($data->{external_id}, "SM-NRUE", "$url external_id check");
 ok(defined $data->{organism}, "$url stock has organism");
+ok(!defined $data->{field_collections}, "$url should have no fc's");
+ok(!defined $data->{genotype_assays}, "$url should have no genotype assays");
+ok(!defined $data->{species_identification_assays}, "$url should have no sp id assays");
 
 #
 # test full stock/ID
