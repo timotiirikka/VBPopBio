@@ -18,29 +18,21 @@ Genotype object with extra convenience functions
 
 =head1 SUBROUTINES/METHODS
 
-=head2 as_data_for_jsonref
+=head2 as_data_structure
 
 returns a json-like hashref of arrayrefs and hashrefs
 
-this method is specifically for dojox.json.ref style json
-
 =cut
 
-sub as_data_for_jsonref {
+sub as_data_structure {
   my ($self, $seen) = @_;
-  my $id = 'gt'.$self->genotype_id;
-  if ($seen->{$id}++) {
-    return { '$ref' => $id };
-  } else {
-#    $self->discard_changes unless ($self->has_column_loaded('name'));
-    return {
-	    id => $id,
-	    name => $self->name,
-	    uniquename => $self->uniquename,
-	    description => $self->description,
-	    props => [ map { $_->as_data_for_jsonref($seen) } $self->genotypeprops ],
-	   };
-  }
+  return {
+	  name => $self->name,
+	  uniquename => $self->uniquename,
+	  description => $self->description,
+	 #  props => [ map { $_->as_data_structure } $self->genotypeprops ],
+	  warning => 'Bob needs to do more on genotype serialisation',
+	 };
 }
 
 
