@@ -27,10 +27,8 @@ overloaded constructor adds default resultset filtering on genotype assay type_i
 
 sub new {
   my ($class, $source, $attribs) = @_;
-  if (keys %{$attribs} == 0) {
-    my $type = $source->schema->types->genotype_assay;
-    $attribs = { where => { 'type_id' => $type->cvterm_id } };
-  }
+  $attribs = {} unless $attribs;
+  $attribs->{where}{type_id} = $source->schema->types->genotype_assay->cvterm_id;
   return $class->SUPER::new($source, $attribs);
 }
 

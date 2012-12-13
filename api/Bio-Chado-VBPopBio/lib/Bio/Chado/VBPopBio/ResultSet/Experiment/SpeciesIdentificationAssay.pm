@@ -22,10 +22,8 @@ overloaded constructor adds default resultset filtering on species identificatio
 
 sub new {
   my ($class, $source, $attribs) = @_;
-  if (keys %{$attribs} == 0) {
-    my $type = $source->schema->types->species_identification_assay;
-    $attribs = { where => { 'type_id' => $type->cvterm_id } };
-  }
+  $attribs = {} unless $attribs;
+  $attribs->{where}{type_id} = $source->schema->types->species_identification_assay->cvterm_id;
   return $class->SUPER::new($source, $attribs);
 }
 
