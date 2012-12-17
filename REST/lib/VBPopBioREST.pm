@@ -67,7 +67,7 @@ get qr{/projects(/head)?} => sub {
 
 
 #Stocks
-get qr{/stocks(/head)?} => sub {
+get qr{/(?:stocks|samples)(/head)?} => sub {
     my ($head) = splat;
     my $depth = $head ? 0 : undef;
     my $l = params->{l} || 20;
@@ -89,7 +89,7 @@ get qr{/stocks(/head)?} => sub {
 };
 
 #Stock
-get qr{/stock/(\w+)(/head)?} => sub {
+get qr{/(?:stock|sample)/(\w+)(/head)?} => sub {
     my ($id, $head) = splat;
     my $stock = schema->stocks->find_by_stable_id($id);
 
@@ -115,7 +115,7 @@ get qr{/assay/(\w+)(/head)?} => sub {
 };
 
 #Project/stocks
-get qr{/project/(\w+)/stocks(/head)?} => sub {
+get qr{/project/(\w+)/(?:stocks|samples)(/head)?} => sub {
     my ($id, $head) = splat;
     my $project = schema->projects->find_by_stable_id($id);
     
@@ -158,7 +158,7 @@ get qr{/project/(\w+)/stocks(/head)?} => sub {
 #};
 
 #Stock/projects
-get qr{/stock/(\w+)/projects(/head)?} => sub {
+get qr{/(?:stock|sample)/(\w+)/projects(/head)?} => sub {
     my ($id, $head) = splat;
     my $stock = schema->stocks->find_by_stable_id($id);
     
@@ -185,7 +185,7 @@ get qr{/stock/(\w+)/projects(/head)?} => sub {
 };
 
 #Stock/assays
-get qr{/stock/(\w+)/assays} => sub {
+get qr{/(?:stock|sample)/(\w+)/assays} => sub {
     my ($id) = splat;
     my $stock = schema->stocks->find_by_stable_id($id);
     
