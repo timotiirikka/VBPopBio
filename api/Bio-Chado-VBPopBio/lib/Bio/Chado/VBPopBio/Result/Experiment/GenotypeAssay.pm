@@ -36,11 +36,6 @@ sub as_data_structure {
 	 };
 }
 
-#sub genotypes {
-#  my ($self, @args) = @_;
-#  return $self->nd_experiment(@args);
-#}
-
 
 
 =head1 AUTHOR
