@@ -1,4 +1,4 @@
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 use strict;
 use JSON;
@@ -8,6 +8,7 @@ my $schema = Bio::Chado::VBPopBio->connect($dsn, $ENV{USER}, undef, { AutoCommit
 my $projects = $schema->projects;
 
 my $json = JSON->new->pretty;
+my $verbose = 1; # print out JSON (or not)
 
 $schema->txn_do_deferred(
 		sub {
@@ -15,7 +16,7 @@ $schema->txn_do_deferred(
 
 		  # make some human readable text from the project and related objects:
 		  my $project_json = $json->encode($project->as_data_structure);
-		  diag("Project '", $project->name, "' was created temporarily as:\n$project_json");
+		  diag("Project '", $project->name, "' was created temporarily as:\n$project_json") if ($verbose);
 
 		  # if (open(TEMP, ">temp-project.json")) { print TEMP $project_json."\n";  close(TEMP); }
 
@@ -38,6 +39,9 @@ $schema->txn_do_deferred(
 		  my ($ka, $ga) = $stock->genotype_assays->all;
 
 		  isa_ok($ka, "Bio::Chado::VBPopBio::Result::Experiment::GenotypeAssay", "genotype_assay is correct class");
+
+
+		  is($ka->protocols->first->description, "Inversion karyotypes were determined via Giemsa staining and visual inspection under light microscopy", "protocol description");
 
 		  # my $kap = $ka->protocols;
 

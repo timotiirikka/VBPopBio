@@ -67,11 +67,11 @@ __PACKAGE__->many_to_many
      'nd_experiment_projects' => 'project',
     );
 
-=head2 nd_protocols
+=head2 nd_protocols and protocols
 
 Type: many_to_many
 
-Returns a list of nd_protocols
+Returns a list of protocols
 
 Related object: Bio::Chado::Schema::Result::NaturalDiversity::NdProtocol
 
@@ -79,9 +79,16 @@ Related object: Bio::Chado::Schema::Result::NaturalDiversity::NdProtocol
 
 __PACKAGE__->many_to_many
     (
+     'protocols',
+     'nd_experiment_protocols' => 'nd_protocol',
+    );
+
+__PACKAGE__->many_to_many
+    (
      'nd_protocols',
      'nd_experiment_protocols' => 'nd_protocol',
     );
+
 
 =head2 genotypes
 
@@ -288,14 +295,9 @@ sub add_to_protocols_from_isatab {
 						 type => $protocol_type,
 						});
 
-
-# TO DO - add multiprops here
-warn "need multiprops for nd_protocol";
-      if ($protocol_info->{study_protocol_description}) {
-	$protocol->create_nd_protocolprops( { description => $protocol_info->{study_protocol_description} },
-					    { cv_name => 'VBcv',
-					      autocreate => 1,
-					    });
+      # set the description
+      if (defined $protocol_info->{study_protocol_description}) {
+	$protocol->description($protocol_info->{study_protocol_description});
       }
 
       # link this experiment to the protocol
@@ -595,6 +597,44 @@ sub multiprops {
 }
 
 
+=head description
+
+get/setter for description (stored via rank==0 prop)
+
+usage
+
+  $protocol->description("this is some text");
+  print $protocol->description;
+
+
+returns the text in both cases
+
+=cut
+
+sub description {
+  my ($self, $description) = @_;
+  my $schema = $self->result_source->schema;
+
+  if (defined $description) {
+    $self->find_or_create_related('nd_experimentprops',
+				  {
+				   type => $schema->types->description,
+				   value => $description,
+				   rank => 0,
+				  });
+  } else {
+    my $propsearch = $self->search_related('nd_experimentprops',
+					   {
+					    type_id => $schema->types->description->id,
+					    rank => 0,
+					   });
+    if ($propsearch->count == 1) {
+      $description = $propsearch->first->value;
+    }
+  }
+  return $description;
+}
+
 
 =head2 as_data_structure
 
@@ -609,51 +649,6 @@ sub as_data_structure {
   return {
 	  $self->basic_info,
           warning => 'Warning: Experiment Result has not been sub-classed!',
-
-#
-# the following information might be useful for as_data_structure() in sub-classes (FieldCollection, etc)
-#
-# 	  nd_geolocation => $self->nd_geolocation->as_data_structure,  # only for field_collection
-#
-#	  genotypes => [ map {
-#	    { $_->get_columns,
-#		genotypeprops => [ map {
-#		  { 'type.name' => $_->type->name,
-#		      $_->get_columns,
-#		    }
-#		} $_->genotypeprops ],
-#	      }
-#	  } $self->genotypes,
-#		       ],
-#
-#	  phenotypes => [ map {
-#	    { $_->get_columns,
-#		$_->observable ? ( 'observable.name' => $_->observable->name ) : (),
-#		  $_->attr ? ( 'attr.name' => $_->attr->name ) : (),
-#		    $_->cvalue ? ( 'cvalue.name' => $_->cvalue->name ) : (),
-#		  }
-#	  } $self->phenotypes,
-#			],
-#
-#	  nd_experimentprops => [ map {
-#	    { $_->get_columns,
-#		'type.name' => $_->type->name,
-#	      }
-#	  } $self->nd_experimentprops,
-#				],
-#
-#	  nd_protocols => [ map {
-#	    { $_->get_columns,
-#		protocolprops => [ map {
-#		  { 'type.name' => $_->type->name,
-#		      $_->get_columns,
-#		  }
-#		} $_->nd_protocolprops,
-#				 ],
-#			       }
-#	  } $self->nd_protocols
-#			  ],
-           
 	 };
 }
 
@@ -668,8 +663,10 @@ sub basic_info {
 
   return (
 	  id => $self->stable_id,
-	  external_id => $self->external_id,
+	  name => $self->external_id,
+	  description => $self->description,
           props => [ map { $_->as_data_structure } $self->multiprops ],
+	  protocols => [ map { $_->as_data_structure } $self->protocols ],
 	 );
 }
 

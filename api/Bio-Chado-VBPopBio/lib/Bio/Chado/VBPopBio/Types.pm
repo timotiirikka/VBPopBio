@@ -39,6 +39,7 @@ sub project_external_ID {
   return $self->schema->cvterms->create_with
     ({ name => 'project external ID',
        cv => 'VBcv',
+       db => 'VBcv',
        description => 'An ID of the format YYYY-AuthorSurname-Keyword(s) - '.
        'should be unique with respect to all VectorBase population data submissions.'
      });
@@ -55,6 +56,7 @@ sub sample_external_ID {
   return $self->schema->cvterms->create_with
     ({ name => 'sample external ID',
        cv => 'VBcv',
+       db => 'VBcv',
        description => 'A sample ID (originating in ISA-Tab Sample Name column).'.
        'It need not follow any formatting rules, but it'.
        'should be unique within a data submission.'
@@ -179,6 +181,20 @@ sub project_stock_link {
 					       db => 'TEMPcv',
 					       dbxref => 'project_stock_link',
 					       description => 'Used to link stocks to projects directly in Chado.  This is a bit of a hack.',
+					     });
+}
+
+
+=head2 description
+
+=cut
+
+sub description {
+  my $self = shift;
+  return $self->schema->cvterms->create_with({ name => 'description',
+					       cv => 'VBcv',
+					       db => 'VBcv',
+					       description => 'Used to add descriptions to items in Chado via properties.',
 					     });
 }
 

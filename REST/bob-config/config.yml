@@ -1,0 +1,8 @@
+serializer: JSON
+plugins:
+      DBIC:
+        default:
+          dsn: dbi:Pg:dbname=BobTestREST
+          schema_class: Bio::Chado::VBPopBio
+
+

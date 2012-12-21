@@ -17,11 +17,16 @@ Bio::Chado::VBPopBio::Util::Multiprops
 Utility class for adding/retrieving multiprops
 (similar to Bio::Chado::Schema::Util)
 
-Currently implemented as "add only", for simplicity.
+Currently implemented as "add only", for simplicity, although will not
+add the same multiprop twice (which implies that you can't specify the
+rank of a multiprop before you add it, although this could change in
+the future).
 
 =head2 add_multiprop
 
 Returns the multiprop that was passed (but this should now have its rank attribute set).
+
+If the multiprop was already attached then it won't add a duplicate.
 
 =cut
 
@@ -37,6 +42,12 @@ sub add_multiprop {
   my $prop_relation_name = delete $args{prop_relation_name};
 
   %args and confess "invalid option(s): ".join(', ', sort keys %args);
+
+  # perform the (expensive!) check for existing multiprops
+  my $input_json = $multiprop->as_json;
+  foreach my $existing_multiprop ($row->multiprops) {
+    return $existing_multiprop if ($existing_multiprop->as_json eq $input_json);
+  }
 
   # find the highest rank of existing props
   my $max_rank = $row->$prop_relation_name->get_column('rank')->max;

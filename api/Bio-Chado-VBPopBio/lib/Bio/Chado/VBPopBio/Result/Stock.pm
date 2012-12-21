@@ -363,7 +363,10 @@ sub as_data_structure {
   return {
       id => $self->stable_id, # use stable_id when ready
       name => $self->name,
-      external_id => $self->external_id,
+
+      # we try to reduce redundancy by just having name (it's identical to external_id anyway)
+      # external_id => $self->external_id,
+
 
       # make sure 'recursion' won't go too deep using $depth argument
       # however, no depth checks for some contained objects, such as organism, cvterms etc

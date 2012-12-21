@@ -42,54 +42,49 @@ sub new {
 
 sub create_from_isatab {
   my ($self, $assay_name, $assay_data, $project, $ontologies, $study) = @_;
-  my $schema = $self->result_source->schema;
 
-  if ($self->looks_like_stable_id($assay_name)) {
-    my $existing_experiment = $self->find_by_stable_id($assay_name);
-    if (defined $existing_experiment) {
-      $existing_experiment->add_to_projects($project);
-      return $existing_experiment;
-    }
-    $schema->defer_exception("$assay_name looks like a stable ID but we couldn't find it in the database");
-  }
+  my $species_identification_assay = $self->find_and_link_existing($assay_name, $project);
 
-  # create the nd_experiment and stock linker type
-  my $cvterms = $schema->cvterms;
+  unless (defined $species_identification_assay) {
+    # create the nd_experiment and stock linker type
+    my $schema = $self->result_source->schema;
+    my $cvterms = $schema->cvterms;
 
-  # always create a new nd_experiment object
-  my $species_identification_assay = $self->create();
-  $species_identification_assay->external_id($assay_name);
-  my $stable_id = $species_identification_assay->stable_id($project);
+    # always create a new nd_experiment object
+    $species_identification_assay = $self->create();
+    $species_identification_assay->external_id($assay_name);
+    my $stable_id = $species_identification_assay->stable_id($project);
 
-  # add it to the project
-  $species_identification_assay->add_to_projects($project);
+    # add it to the project
+    $species_identification_assay->add_to_projects($project);
 
-  $species_identification_assay->add_to_protocols_from_isatab($assay_data->{protocols}, $ontologies, $study);
+    $species_identification_assay->add_to_protocols_from_isatab($assay_data->{protocols}, $ontologies, $study);
 
-  # now actually load the assay result!
-  # as a nd_experimentprop where type = MIRO species CV term
-  if (defined (my $organism_data = $assay_data->{characteristics}{'Organism'})) {
+    # now actually load the assay result!
+    # as a nd_experimentprop where type = MIRO species CV term
+    if (defined (my $organism_data = $assay_data->{characteristics}{'Organism'})) {
 
-    if (  # ($organism_data->{term_source_ref} eq 'NCBITaxon' ||
-	$organism_data->{term_source_ref} eq 'MIRO' &&
-	length($organism_data->{term_accession_number})) {
+      if (	# ($organism_data->{term_source_ref} eq 'NCBITaxon' ||
+	  $organism_data->{term_source_ref} eq 'MIRO' &&
+	  length($organism_data->{term_accession_number})) {
 
-      my $dbname = $organism_data->{term_source_ref};
-      my $acc = $organism_data->{term_accession_number};
-      my $cvterm = $cvterms->find( { 'dbxref.accession' => $acc,
+	my $dbname = $organism_data->{term_source_ref};
+	my $acc = $organism_data->{term_accession_number};
+	my $cvterm = $cvterms->find( { 'dbxref.accession' => $acc,
 				       'db.name' => $dbname,
-				   },
-				   { join => { 'dbxref' => 'db' } });
+				     },
+				     {
+				      join => { 'dbxref' => 'db' } });
 
-      croak "Can't find species id results MIRO CV term $dbname:$acc\n" unless ($cvterm);
+	croak "Can't find species id results MIRO CV term $dbname:$acc\n" unless ($cvterm);
 
-      $species_identification_assay->find_or_create_related('nd_experimentprops',
-							    { type => $cvterm,
-							      value => '',
-							    });
+	$species_identification_assay->find_or_create_related('nd_experimentprops',
+							      { type => $cvterm,
+								value => '',
+							      });
+      }
     }
   }
-
   return $species_identification_assay;
 
 }
