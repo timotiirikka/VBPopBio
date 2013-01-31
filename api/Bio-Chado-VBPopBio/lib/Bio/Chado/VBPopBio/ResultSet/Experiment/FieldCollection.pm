@@ -69,6 +69,9 @@ sub create_from_isatab {
     $field_collection->external_id($assay_name);
     my $stable_id = $field_collection->stable_id($project);
 
+    # add description, characteristics etc
+    $field_collection->annotate_from_isatab($assay_data);
+
     # link it to the project
     $field_collection->add_to_projects($project);
 

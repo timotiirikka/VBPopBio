@@ -55,6 +55,9 @@ sub create_from_isatab {
     $species_identification_assay->external_id($assay_name);
     my $stable_id = $species_identification_assay->stable_id($project);
 
+    # add description, characteristics etc
+    $species_identification_assay->annotate_from_isatab($assay_data);
+
     # add it to the project
     $species_identification_assay->add_to_projects($project);
 

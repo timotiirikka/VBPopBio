@@ -1,2 +1,2 @@
-Sample Name	Assay Name	Protocol REF	Characteristics [Organism]	Term Source REF	Term Accession Number
-Sample01	Sample01.spid1	species id	Anopheles gambiae M	MIRO	40003235
+Sample Name	Assay Name	Description	Protocol REF	Characteristics [Organism]	Term Source REF	Term Accession Number
+Sample01	Sample01.spid1	This was a really nice assay.	species id	Anopheles gambiae M	MIRO	40003235

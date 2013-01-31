@@ -64,6 +64,9 @@ sub create_from_isatab {
     $genotype_assay->external_id($assay_name);
     my $stable_id = $genotype_assay->stable_id($project);
 
+    # add description, characteristics etc
+    $genotype_assay->annotate_from_isatab($assay_data);
+
     # add to project
     $genotype_assay->add_to_projects($project);
 

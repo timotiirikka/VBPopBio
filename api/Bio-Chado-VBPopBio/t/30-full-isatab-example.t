@@ -1,4 +1,4 @@
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 use strict;
 use JSON;
@@ -42,6 +42,10 @@ $schema->txn_do_deferred(
 
 
 		  is($ka->protocols->first->description, "Inversion karyotypes were determined via Giemsa staining and visual inspection under light microscopy", "protocol description");
+
+
+		  my $spa = $stock->species_identification_assays->first;
+		  is($spa->description, "This was a really nice assay.", "species id assay description");
 
 		  # my $kap = $ka->protocols;
 

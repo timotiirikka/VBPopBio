@@ -231,6 +231,25 @@ sub classify {
   }
 }
 
+=head2 annotate_from_isatab
+
+  Usage: $assay->annotate_from_isatab($assay_data)
+
+  Return value: none
+
+  Args: hashref of ISA-Tab data: $study->{study_assays}[0]{samples}{SAMPLE_NAME}{assays}{ASSAY_NAME}
+
+Adds description, comments, characteristics to the assay/nd_experiment object
+
+=cut
+
+sub annotate_from_isatab {
+  my ($self, $assay_data) = @_;
+
+  if (defined $assay_data->{description}) {
+    $self->description($assay_data->{description});
+  }
+}
 
 
 =head2 add_to_protocols_from_isatab
@@ -239,7 +258,7 @@ sub classify {
 
   Return value: a Perl list of the protocols added.
 
-  Args:  hashref to $study->{study_assay_lookup}{'some type of assay'}{samples}{SAMPLE_NAME}{assays}{ASSAY_NAME}{protocols}
+  Args:  hashref to $study->{study_assays}[0]{samples}{SAMPLE_NAME}{assays}{ASSAY_NAME}{protocols}
 
 Adds zero or more protocols from ISA-Tab data.
 

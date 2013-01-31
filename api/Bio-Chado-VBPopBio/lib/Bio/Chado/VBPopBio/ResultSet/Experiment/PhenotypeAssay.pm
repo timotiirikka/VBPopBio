@@ -65,6 +65,9 @@ sub create_from_isatab {
     $phenotype_assay->external_id($assay_name);
     my $stable_id = $phenotype_assay->stable_id($project);
 
+    # add description, characteristics etc
+    $phenotype_assay->annotate_from_isatab($assay_data);
+
     # add it to the project
     $phenotype_assay->add_to_projects($project);
 
