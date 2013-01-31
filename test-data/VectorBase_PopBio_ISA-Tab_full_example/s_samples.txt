@@ -1,3 +1,3 @@
-Source Name	Sample Name	Description	Comment [something]	Material Type	Term Source REF	Term Accession Number	Characteristics [Organism]	Term Source REF	Term Accession Number
-Source01	Sample01	First sample of many	not loaded yet	whole organism	EFO	0002906	Anopheles gambiae	NCBITaxon	7165
-Source02	Sample02	Second sample of many	second comment	whole organism	EFO	0002906	Anopheles gambiae	NCBITaxon	7165
+"Source Name"	"Sample Name"	Description	"Comment [something]"	"Material Type"	"Term Source REF"	"Term Accession Number"	"Characteristics [assumed species (VBcv:XXXXXXX)]"	"Term Source REF"	"Term Accession Number"	"Characteristics [sex (EFO:0000695)]"	"Term Source REF"	"Term Accession Number"	"Characteristics [developmental stage (EFO:0000399)]"	"Term Source REF"	"Term Accession Number"	"Characteristics [age (EFO:0000246)]"	Unit	"Term Source REF"	"Term Accession Number"	"Characteristics [reproductive status (VBcv:XXXXXX)]"	"Term Source REF"	"Term Accession Number"
+Source01	Sample01	"First sample of many"	"not loaded yet"	"whole organism"	EFO	0002906	"Anopheles gambiae"	MIRO	40003829	female	PATO	0000383	adult	IDOMAL	0000655	4	day	UO	0000033
+Source02	Sample02	"Second sample of many"	"second comment"	"whole organism"	EFO	0002906	"Anopheles gambiae"	MIRO	40003829	"mixed sex"	PATO	0001338	adult	IDOMAL	0000655	2-3	week	UO	0000034
