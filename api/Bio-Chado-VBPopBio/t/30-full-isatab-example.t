@@ -1,4 +1,4 @@
-use Test::More tests => 10;
+use Test::More tests => 12;
 
 use strict;
 use JSON;
@@ -22,6 +22,8 @@ $schema->txn_do_deferred(
 
 		  # run some tests
 		  is($project->name, 'Example ISA-Tab for VectorBase PopBio', "project name");
+		  is($project->submission_date, '2012-01-01', 'submission date');
+		  is($project->public_release_date, '2013-01-01', 'public release date');
 
 		  my $stock = $project->stocks->first;
 		  isa_ok($stock, "Bio::Chado::VBPopBio::Result::Stock", "first stock is a stock");
@@ -38,10 +40,10 @@ $schema->txn_do_deferred(
 		  # karyotype assay is loaded first (comes first in investigation sheet)
 		  my ($ka, $ga) = $stock->genotype_assays->all;
 
-		  isa_ok($ka, "Bio::Chado::VBPopBio::Result::Experiment::GenotypeAssay", "genotype_assay is correct class");
+#		  isa_ok($ka, "Bio::Chado::VBPopBio::Result::Experiment::GenotypeAssay", "genotype_assay is correct class");
 
 
-		  is($ka->protocols->first->description, "Inversion karyotypes were determined via Giemsa staining and visual inspection under light microscopy", "protocol description");
+#		  is($ka->protocols->first->description, "Inversion karyotypes were determined via Giemsa staining and visual inspection under light microscopy", "protocol description");
 
 
 		  my $spa = $stock->species_identification_assays->first;

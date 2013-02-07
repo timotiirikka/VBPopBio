@@ -1,5 +1,7 @@
 package Bio::Chado::VBPopBio::Result::Project;
 
+use strict;
+use warnings;
 use Carp;
 use POSIX;
 use feature 'switch';
@@ -8,8 +10,13 @@ __PACKAGE__->load_components(qw/+Bio::Chado::VBPopBio::Util::Subclass/);
 __PACKAGE__->subclass({
 		       nd_experiment_projects => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentProject',
 		       projectprops => 'Bio::Chado::VBPopBio::Result::Projectprop',
+                       project_pubs => 'Bio::Chado::VBPopBio::Result::Linker::ProjectPublication',
 		      });
 __PACKAGE__->resultset_attributes({ order_by => 'project_id' });
+
+use aliased 'Bio::Chado::VBPopBio::Util::Multiprops';
+use aliased 'Bio::Chado::VBPopBio::Util::Extra';
+use aliased 'Bio::Chado::VBPopBio::Util::Date';
 
 =head1 NAME
 
@@ -55,6 +62,20 @@ __PACKAGE__->many_to_many
     (
      'nd_experiments',
      'nd_experiment_projects' => 'nd_experiment',
+    );
+
+=head2 publications
+
+Type: many_to_many
+
+Returns a resultset of publications
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'publications',
+     'project_pubs' => 'pub',
     );
 
 
@@ -145,6 +166,8 @@ get/setter for the project external id (study identifier from ISA-Tab)
 format 2011-MacCallum-permethrin-selected
 
 returns undef if not found
+
+(Can't use Util::Extra->attribute because we need the check that prevents the external ID changing.)
 
 =cut
 
@@ -245,9 +268,49 @@ sub stable_id {
   } elsif ($search->count == 1) {
     return $search->first->accession;
   } else {
-    croak "Too many dbxrefs for project ".$project->external_id." with dbxrefprop project external ID";
+    croak "Too many dbxrefs for project ".$self->external_id." with dbxrefprop project external ID";
   }
 
+}
+
+=head2 submission_date
+
+Get/setter for the submission date
+(date is stored in a multiprop in Chado).
+
+If no date is stored, return undef.
+
+=cut
+
+sub submission_date {
+  my ($self, $date) = @_;
+  my $valid_date = Date->simple_validate_date($date, $self);
+  return Extra->attribute
+    ( value => $valid_date,
+      prop_type => $self->result_source->schema->types->submission_date,
+      prop_relation_name => 'projectprops',
+      row => $self,
+    );
+}
+
+=head2 public_release_date
+
+Get/setter for the submission date
+(date is stored in a multiprop in Chado).
+
+If no date is stored, return undef.
+
+=cut
+
+sub public_release_date {
+  my ($self, $date) = @_;
+  my $valid_date = Date->simple_validate_date($date, $self);
+  return Extra->attribute
+    ( value => $valid_date,
+      prop_type => $self->result_source->schema->types->public_release_date,
+      prop_relation_name => 'projectprops',
+      row => $self,
+    );
 }
 
 =head2 delete
@@ -316,6 +379,25 @@ sub multiprops {
       prop_relation_name => 'projectprops',
     );
 }
+
+=head2 multiprop
+
+get a single multiprop with the specified cvterm at position one in chain.
+
+usage: $multiprop = $project->multiprop($submission_date_cvterm);
+
+=cut
+
+sub multiprop {
+  my ($self, $cvterm) = @_;
+
+  return Multiprops->get_multiprops
+    ( row => $self,
+      prop_relation_name => 'projectprops',
+      filter => $cvterm,
+    );
+}
+
 
 =head2 add_to_stocks
 
@@ -398,38 +480,12 @@ sub as_data_structure {
 	  id => $self->stable_id,
 	  external_id => $self->external_id,
 	  description => $self->description,
-
-#	  projectprops => [ map {
-#	    { $_->get_columns,
-#		type => { $_->type->get_columns },
-#	      } } $self->projectprops
-#			  ],
+	  submission_date => $self->submission_date,
+	  public_release_date => $self->public_release_date,
+	  publications => [ map { $_->as_data_structure } $self->publications ],
+	  props => [ map { $_->as_data_structure } $self->multiprops ],
 	  ($depth > 0) ? (stocks => [ map { $_->as_data_structure($depth-1) } $self->stocks ]) : (),
 	 };
-}
-
-=head2 as_data_for_jsonref
-
-returns a json-like hashref of arrayrefs and hashrefs
-
-this method is specifically for dojox.json.ref style json
-
-=cut
-
-sub as_data_for_jsonref {
-  my ($self, $seen) = @_;
-  my $id = 'p'.$self->project_id;
-  if ($seen->{$id}++) {
-    return { '$ref' => $id };
-  } else {
-    return {
-	    id => $id,
-	    name => $self->name,
-	    description => $self->description,
-	    stocks => [ map { $_->as_data_for_jsonref($seen) } $self->stocks ],
-	    props => [ map { $_->as_data_for_jsonref($seen) } $self->projectprops ],
-	 };
-  }
 }
 
 =head1 AUTHOR

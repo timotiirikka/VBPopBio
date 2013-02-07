@@ -28,6 +28,10 @@ Returns the multiprop that was passed (but this should now have its rank attribu
 
 If the multiprop was already attached then it won't add a duplicate.
 
+hash args: row => DBIx::Class Row or Result object
+           prop_relation_name => DBIx props table relation name, e.g. 'stockprops'
+           multiprop => Multiprop object
+
 =cut
 
 sub add_multiprop {
@@ -88,6 +92,12 @@ sub add_multiprop {
 
 Retrieve props and process them into multiprops
 
+hash args: row => DBIx::Class Row or Result object
+           prop_relation_name => DBIx props table relation name, e.g. 'stockprops'
+
+           # the following OPTIONAL arg is for internal use (see multiprop methods in Result classes)
+           filter => Cvterm object - returns the first multiprop with this term first in chain.
+
 Returns a perl list of multiprops
 
 Does NOT return props with ranks <= 0.
@@ -103,6 +113,9 @@ sub get_multiprops {
 
   my $row = delete $args{row};
   my $prop_relation_name = delete $args{prop_relation_name};
+  my $filter = delete $args{filter};
+
+  confess "filter option requires a Cvterm object" unless (!defined $filter || $filter->isa("Bio::Chado::VBPopBio::Result::Cvterm"));
 
   %args and confess "invalid option(s): ".join(', ', sort keys %args);
 
@@ -128,13 +141,18 @@ sub get_multiprops {
     my $value = pop(@{$prop_group})->value;
     confess "value should not be magic value '$MAGIC_VALUE'"
       if (defined $value && $value eq $MAGIC_VALUE);
-    push @multiprops, Multiprop->new(cvterms => \@cvterms,
+    my $multiprop =  Multiprop->new(cvterms => \@cvterms,
 				     value => $value,
 				     rank => $rank,);
 
+    if ($filter && $filter->cvterm_id == $cvterms[0]->cvterm_id) {
+      return $multiprop;
+    } else {
+      push @multiprops, $multiprop;
+    }
   }
-  return @multiprops;
+  # if we're filtering (and didn't find the multiprop we wanted) then return nothing!
+  return $filter ? undef : @multiprops;
 }
-
 
 1;

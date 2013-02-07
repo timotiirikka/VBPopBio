@@ -21,6 +21,7 @@ __PACKAGE__->resultset_attributes({ order_by => 'nd_experiment_id' });
 
 use aliased 'Bio::Chado::VBPopBio::Util::Multiprops';
 use aliased 'Bio::Chado::VBPopBio::Util::Multiprop';
+use aliased 'Bio::Chado::VBPopBio::Util::Extra';
 
 =head1 NAME
 
@@ -632,26 +633,12 @@ returns the text in both cases
 
 sub description {
   my ($self, $description) = @_;
-  my $schema = $self->result_source->schema;
-
-  if (defined $description) {
-    $self->find_or_create_related('nd_experimentprops',
-				  {
-				   type => $schema->types->description,
-				   value => $description,
-				   rank => 0,
-				  });
-  } else {
-    my $propsearch = $self->search_related('nd_experimentprops',
-					   {
-					    type_id => $schema->types->description->id,
-					    rank => 0,
-					   });
-    if ($propsearch->count == 1) {
-      $description = $propsearch->first->value;
-    }
-  }
-  return $description;
+  return Extra->attribute
+    ( value => $description,
+      prop_type => $self->result_source->schema->types->description,
+      prop_relation_name => 'nd_experimentprops',
+      row => $self,
+    );
 }
 
 

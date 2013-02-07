@@ -234,6 +234,15 @@ sub organisms {
   return $self->resultset('Organism');
 }
 
+=head2 publications
+
+=cut
+
+sub publications {
+  my $self = shift;
+  return $self->resultset('Publication');
+}
+
 =head1 EXCEPTION HANDLING
 
 =head2 txn_do_deferred

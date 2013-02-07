@@ -65,16 +65,19 @@ sub sample_external_ID {
 
 =head2 experiment_external_ID
 
-User-provided ID for experiments, e.g. Mali-1234
+User-provided ID for assays, e.g. Mali-1234
+
+(note, "assay" will be used on all external facing aspects of VBPopBio
+while the code will talk about experiments (i.e. nd_experiments)
 
 =cut
 
 sub experiment_external_ID {
   my $self = shift;
   return $self->schema->cvterms->create_with
-    ({ name => 'experiment external ID',
+    ({ name => 'assay external ID',
        cv => 'VBcv',
-       description => 'An experiment ID (originating in ISA-Tab Assay Name column).'.
+       description => 'An assay ID (originating in ISA-Tab Assay Name column).'.
        'It need not follow any formatting rules, but it'.
        'should be unique within the entire ISA-Tab data submission.'
      });
@@ -104,6 +107,38 @@ sub end_date {
   return $self->schema->cvterms->find_by_name({ term_source_ref => 'VBcv',
 						term_name => 'end date' });
 }
+
+
+=head2 submission_date
+
+VBcv:submission_date
+
+=cut
+
+sub submission_date {
+  my $self = shift;
+  return $self->schema->cvterms->create_with({ name => 'submission date',
+					       cv => 'VBcv',
+					       db => 'VBcv',
+					       description => 'The date at which the data was submitted to VectorBase.',
+					     });
+}
+
+=head2 public_release_date
+
+VBcv:public_release_date
+
+=cut
+
+sub public_release_date {
+  my $self = shift;
+  return $self->schema->cvterms->create_with({ name => 'public release date',
+					       cv => 'VBcv',
+					       db => 'VBcv',
+					       description => 'The date at or after which the data was made available on VectorBase.',
+					     });
+}
+
 
 =head2 placeholder
 
@@ -196,6 +231,19 @@ sub description {
 					       db => 'VBcv',
 					       description => 'Used to add descriptions to items in Chado via properties.',
 					     });
+}
+
+=head2 study_design
+
+EFO:study design
+
+=cut
+
+sub study_design {
+  my $self = shift;
+  return $self->schema->cvterms->find_by_accession( { term_source_ref => 'EFO',
+						      term_accession_number => '0001426',
+						    } );
 }
 
 1;

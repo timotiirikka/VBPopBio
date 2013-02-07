@@ -35,7 +35,7 @@ sub as_data_structure {
           # let's only show locations for field_collections at the moment
 	  # geolocation => $self->nd_geolocation->as_data_structure,
 
-          species => "A. gambiae",
+          species => "fix me fix me",
 	 };
 }
 
