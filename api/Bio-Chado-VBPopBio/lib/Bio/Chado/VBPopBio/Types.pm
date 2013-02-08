@@ -246,4 +246,20 @@ sub study_design {
 						    } );
 }
 
+=head2 person
+
+VBcv:person
+
+=cut
+
+sub person {
+  my $self = shift;
+  return $self->schema->cvterms->create_with({ name => 'person',
+					       cv => 'VBcv',
+					       db => 'VBcv',
+					       description => 'A cvterm used internally within VectorBase in the Chado contact table.',
+					     });
+}
+
+
 1;

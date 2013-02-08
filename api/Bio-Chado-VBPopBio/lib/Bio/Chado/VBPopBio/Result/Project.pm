@@ -11,6 +11,7 @@ __PACKAGE__->subclass({
 		       nd_experiment_projects => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentProject',
 		       projectprops => 'Bio::Chado::VBPopBio::Result::Projectprop',
                        project_pubs => 'Bio::Chado::VBPopBio::Result::Linker::ProjectPublication',
+                       project_contacts => 'Bio::Chado::VBPopBio::Result::Linker::ProjectContact',
 		      });
 __PACKAGE__->resultset_attributes({ order_by => 'project_id' });
 
@@ -76,6 +77,20 @@ __PACKAGE__->many_to_many
     (
      'publications',
      'project_pubs' => 'pub',
+    );
+
+=head2 contacts
+
+Type: many_to_many
+
+Returns a resultset of contacts
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'contacts',
+     'project_contacts' => 'contact',
     );
 
 
@@ -483,6 +498,7 @@ sub as_data_structure {
 	  submission_date => $self->submission_date,
 	  public_release_date => $self->public_release_date,
 	  publications => [ map { $_->as_data_structure } $self->publications ],
+	  contacts => [ map { $_->as_data_structure } $self->contacts ],
 	  props => [ map { $_->as_data_structure } $self->multiprops ],
 	  ($depth > 0) ? (stocks => [ map { $_->as_data_structure($depth-1) } $self->stocks ]) : (),
 	 };

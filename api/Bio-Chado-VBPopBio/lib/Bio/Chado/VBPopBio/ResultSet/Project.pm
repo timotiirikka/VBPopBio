@@ -137,8 +137,10 @@ sub create_from_isatab {
   #
   # add the study contacts
   #
+  my $contacts = $schema->contacts;
   foreach my $study_contact (@{$study->{study_contacts}}) {
-    warn "TO DO: add project contact $study_contact->{study_person_last_name}\n";
+    my $contact = $contacts->find_or_create_from_isatab($study_contact);
+    $project->add_to_contacts($contact) if ($contact);
   }
 
   # create stand-alone stocks

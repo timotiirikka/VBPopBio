@@ -50,7 +50,16 @@ Usage: $cvterm = $cvterms->find_by_accession({ term_source_ref => 'TGMA',
 sub find_by_accession {
   my ($self, $arg) = @_;
   if (defined $arg && defined $arg->{term_source_ref} && defined $arg->{term_accession_number}) {
-    my $dbxref = $self->result_source->schema->dbxrefs->find
+    my $schema = $self->result_source->schema;
+    #
+    # temporary maybe?
+    #
+    if ($arg->{term_accession_number} =~ /^x+$/i) {
+      $schema->defer_exception_once("Ontology term $arg->{term_source_ref}:$arg->{term_accession_number} replaced with placeholder");
+      return $schema->types->placeholder;
+    }
+
+    my $dbxref = $schema->dbxrefs->find
       ({ accession => $arg->{term_accession_number},
 	 version => '',
 	 'db.name' => $arg->{term_source_ref}

@@ -46,85 +46,23 @@ sub find_or_create_from_isatab {
   my $cvterms = $schema->cvterms;
   my $dbxrefs = $schema->dbxrefs;
 
-  # use Material Type here????
-
   my $material_type = $cvterms->find_by_accession($sample_data->{material_type});
 
   croak "Sample material type not found (REF=$sample_data->{material_type}{term_source_ref},ACC=$sample_data->{material_type}{term_accession_number})\n" unless (defined $material_type);
 
-  # create a Chado organism object
-  my $organisms = $schema->organisms;
-  my $stock_organism = undef;
-
-  my $organism_data = $sample_data->{characteristics}{'Organism'};
-
-  if (defined $organism_data) {
-  # see if organism has been provided from NCBI taxonomy or
-    if ((defined $organism_data->{term_source_ref} &&
-	 ($organism_data->{term_source_ref} eq 'NCBITaxon' ||
-	  $organism_data->{term_source_ref} eq 'MIRO')) && # MIRO organisms not loaded yet!
-	defined $organism_data->{term_accession_number} &&
-	length($organism_data->{term_accession_number})) {
-
-      my $dbname = $organism_data->{term_source_ref};
-      my $acc = $organism_data->{term_accession_number};
-      my $search = $organisms->search( { 'dbxref.accession' => $acc,
-					 'db.name' => $dbname,
-				       },
-				       {
-					join => { 'organism_dbxrefs' => { 'dbxref' => 'db' } } });
-
-      my $count = $search->count;
-      if ($count == 0) {
-	$schema->defer_exception("Can't find organism $dbname:$acc for sample $sample_name\n");
-	$stock_organism = $organisms->first;
-      } elsif ($count > 1) {
-	croak "Found multiple organisms with $dbname:$acc for sample $sample_name - something's wrong!";
-	$stock_organism = $organisms->first;
-      } else {
-	$stock_organism = $search->first;
-      }
-    } else {
-      # fallback to user provided text
-      my ($genus, $species) = split " ", $organism_data->{value}, 2;
-      $species = '' unless (defined $species);
-
-      #
-      # Do a few common MIRO to NCBITaxon conversions
-      #
-      ($genus, $species) = ('gambiae', 'species complex') if ($organism_data->{value} eq 'Anopheles gambiae sensu lato');
-      ($genus, $species) = ('Culex', '') if ($organism_data->{value} eq 'genus Culex');
-
-      if ($genus) {
-	$stock_organism = $organisms->find({ genus => $genus,
-					     species => $species,
-					   }) or $schema->defer_exception("Warning: Sample 'Characteristics [Organism]' genus-species <$genus>-<$species> not in db for sample '$sample_name'.");
-      }
-      # else permitted empty 'Characteristics [Organism]' column -> silently adds null organism to stock.
-    }
-  }
-
   # first check to see if we have a sample stable ID that's already in the db
   if ($self->looks_like_stable_id($sample_name)) {
-    my $existing_stock = $self->find_by_stable_id($sample_name); # will only work if sample_name is VBSnnnnnnn of course
+    my $existing_stock = $self->find_by_stable_id($sample_name);
+    # will only work if sample_name is VBSnnnnnnn of course
     if (defined $existing_stock) {
       # now check some vital things are the same:
-      if ($existing_stock->type_id == $material_type->cvterm_id &&
-	  (
-	   # it's OK to leave organism blank when reusing a stock
-	   !defined $stock_organism ||
-	   # or if the existing stock has no organism and we don't provide one
-	   (!defined $existing_stock->organism && !defined $stock_organism) ||
-	   # or if the existing and provided organisms are the same
-	   $stock_organism->organism_id == $existing_stock->organism->organism_id
-	  )) {
-
+      if ($existing_stock->type_id == $material_type->cvterm_id) {
 	if (keys %{$sample_data->{characteristics}}) {
 	  $schema->defer_exception_once("Sample characteristics have been provided for pre-existing samples.  This is not allowed (as validating them would be onerous).");
 	}
 	return $existing_stock;
       } else {
-	$schema->defer_exception("sample type and organism in ISA-Tab (".$material_type->name.", ".($stock_organism ? $stock_organism->name : 'null').") do not agree with pre-existing sample $sample_name (".$existing_stock->type->name().", ".($existing_stock->organism ? $existing_stock->organism->name : 'null').')');
+	$schema->defer_exception("reused sample $sample_name, Material Type does not agree with existing sample");
       }
     } else {
       $schema->defer_exception("$sample_name looked like a stable ID but we couldn't find it in the database");
@@ -137,7 +75,6 @@ sub find_or_create_from_isatab {
 			     uniquename => $study->{study_identifier}.":".$sample_name,
 			     description => $sample_data->{description},
 			     type => $material_type,
-			     defined $stock_organism ? (organism => $stock_organism) : (),
 			    });
 
   # Create or re-use a "stable id"
