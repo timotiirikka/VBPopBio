@@ -155,4 +155,77 @@ sub get_multiprops {
   return $filter ? undef : @multiprops;
 }
 
+=head2 add_multiprops_from_isatab_characteristics
+
+usage Multiprops->add_multiprops_from_isatab_characteristics
+        ( row => $stock,
+          prop_relation_name => 'stockprops',
+          characteristics => $study->{samples}{my_sample}{characteristics} );
+
+Adds a multiprop to the Chado object for each "Characteristics [xxx (ONTO:accession)] column.
+If the column heading is not ontologised or the term can't be found, an exception will be thrown.
+Units will be added as appropriate.
+
+=cut
+
+sub add_multiprops_from_isatab_characteristics {
+  my ($class, %args) = @_;
+
+  # check for required args
+  $args{$_} or confess "must provide $_ arg"
+    for qw/row prop_relation_name characteristics/;
+
+  my $row = delete $args{row};
+  my $characteristics = delete $args{characteristics};
+  my $prop_relation_name = delete $args{prop_relation_name};
+
+  %args and confess "invalid option(s): ".join(', ', sort keys %args);
+
+  my $schema = $row->result_source->schema;
+
+  # for each characteristics column
+  while (my ($cname, $cdata) = each %{$characteristics}) {
+    # first handle the column name (first term in multiprop sentence)
+    if ($cname =~ /\((\w+):(\w+)\)/) {
+      my ($onto, $acc) = ($1, $2);
+      my $cterm = $schema->cvterms->find_by_accession
+	({
+	  term_source_ref => $onto,
+	  term_accession_number => $acc
+	 });
+      if ($cterm) {
+	my @cvterms;
+	# now handle value
+	my $value = $cdata->{value};
+	my $vterm = $schema->cvterms->find_by_accession($cdata);
+	my $uterm = $schema->cvterms->find_by_accession($cdata->{unit});
+	if ($uterm && defined $value && length($value)) {
+	  # case 1: free text value with units
+	  @cvterms = ($cterm, $uterm);
+	  $schema->defer_exception_once("$cname value $value cannot be ontology term and have units") if ($vterm);
+	} elsif ($vterm) {
+	  # case 2: cvterm value
+	  @cvterms = ($cterm, $vterm);
+	  $value = undef;
+	} else {
+	  # case 3: free text value no units
+	  @cvterms = ($cterm);
+	  # but throw some errors if we were expecting to have ontology term for value
+	  $schema->defer_exception_once("$cname value $value failed to find ontology term for '$cdata->{term_source_ref}:$cdata->{term_accession_number}'") if ($cdata->{term_source_ref} && $cdata->{term_accession_number});
+	  # or units
+	  $schema->defer_exception_once("$cname value $value unit ontology lookup error '$cdata->{unit}{term_source_ref}:$cdata->{unit}{term_accession_number}'") if ($cdata->{unit}{term_source_ref} && $cdata->{unit}{term_accession_number});
+	}
+	$class->add_multiprop
+	  ( row => $row,
+	    prop_relation_name => $prop_relation_name,
+	    multiprop => Multiprop->new(cvterms=>\@cvterms, value=>$value) );
+      } else {
+	$schema->defer_exception_once("Characteristics [$cname] - can't find ontology term via $onto:$acc");
+      }
+    } else {
+      $schema->defer_exception_once("Characteristics [$cname] - does not contain ontology accession - skipping column.");
+    }
+  }
+}
+
 1;

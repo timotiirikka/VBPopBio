@@ -57,7 +57,6 @@ has 'rank' => (
 	       );
 
 
-
 =head2 as_data_structure
 
 returns a data structure suitable for JSONification

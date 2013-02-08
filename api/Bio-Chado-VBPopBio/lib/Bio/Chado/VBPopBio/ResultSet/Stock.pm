@@ -3,7 +3,7 @@ package Bio::Chado::VBPopBio::ResultSet::Stock;
 use strict;
 use base 'DBIx::Class::ResultSet';
 use Carp;
-use aliased 'Bio::Chado::VBPopBio::Util::Multiprop';
+use aliased 'Bio::Chado::VBPopBio::Util::Multiprops';
 
 
 =head1 NAME
@@ -144,103 +144,17 @@ sub find_or_create_from_isatab {
   my $stable_id = $stock->stable_id($project);
 
   #
-  # Deal with arbitrary "Characteristics [ONTO:term name]" columns
+  # Deal with "Characteristics [term name (ONTO:accession)]" columns
   # by adding multiprops for them
   #
-  foreach my $cname (keys %{$sample_data->{characteristics}}) {
-    next if ($cname eq 'Organism');
-
-    my $characteristic_data = $sample_data->{characteristics}{$cname};
-
-    # first look up the name to see if it is a CV term
-    if ($cname =~ /(\w+):(.+)/) {
-      my $cterm = $cvterms->find_by_name({ term_source_ref => $1, term_name => $2 });
-      if (defined $cterm) {
-	# we'll add a multiprop
-	my @mterms;		#cvterms
-	my $value;
-	push @mterms, $cterm;
-	my $vterm = $cvterms->find_by_accession($characteristic_data);
-	if (defined $vterm) {
-	  push @mterms, $vterm;
-	} else {
-	  $value = $characteristic_data->{value};
-	  # in this case, the multiprop is identical to a standard prop
-	}
-	my $mprop = $stock->add_multiprop(Multiprop->new(cvterms => \@mterms, value => $value));
-	# warn "just added multiprop: ".$mprop->as_text."\n";
-      } else {
-	$schema->defer_exception_once("Can't find unique ontology term '$cname' for ISA-Tab sample column heading 'Characteristics ($cname)'");
-      }
-    } else {
-      $schema->defer_exception_once("Sample column 'Characteristics (>>>$cname<<<)' must use an ontology term, e.g. 'EFO:organism'\n");
-    }
-
-  }
+  Multiprops->add_multiprops_from_isatab_characteristics
+    ( row => $stock,
+      prop_relation_name => 'stockprops',
+      characteristics => $sample_data->{characteristics} );
 
   if ($sample_data->{factor_values}) {
     warn "Warning: Not currently loading factor values for samples\n" unless ($self->{FV_WARNED_ALREADY}++);
   }
-
-#
-# NOT LOADING FACTOR VALUE COLUMNS AT PRESENT (see email discussion with Emmanuel/Pantelis)
-#
-#
-#    # load any factor values
-#    if ($sample_data->{factor_values}) {
-#      while (my ($factor_name, $factor_data) = each %{$sample_data->{factor_values}}) {
-#
-#	# slice of a hashref @{$hashref}{'key1', 'key2'}
-#	my ($factor_type, $factor_acc, $factor_source) =
-#	  @{$study->{study_factor_lookup}{$factor_name}}{qw/study_factor_type
-#							    study_factor_type_term_accession_number
-#							    study_factor_type_term_source_ref/};
-#
-#	# in cases like where EFO terms have OBI:012345 accessions
-#	# (our dbxrefs are OBI:012345)
-#	#
-#	###NOT ANY MORE### let's handle issues like this at submission stage, not here
-#	# if ($factor_acc =~ /^(.+?):(.+)$/) {
-#	#	($factor_source, $factor_acc) = ($1, $2);
-#	# }
-#
-#	my $factor_dbxref = $dbxrefs->find({ accession => $factor_acc,
-#					     version => '',
-#					     'db.name' => $factor_source },
-#					   { join => 'db',
-#					     # doesn't seem possible to specify constraint key due to join
-#					   }
-#					  );
-#
-#	if (defined $factor_dbxref and my $factor_term = $factor_dbxref->cvterm) {
-#	  $stock->find_or_create_related( 'stockprops',
-#					  { type => $factor_term,
-#					    value => $factor_data->{value},
-#					  }
-#					);
-#
-#
-#	  # get the primary key ID of the cvterm we just created in VBcv (for path spec below)
-#	  # my $type_id = $cvterms->find( { name => $factor_type, 'cv.name' => 'VBcv' }, { join => 'cv' })->cvterm_id;
-#
-#	  # add a property to the project pointing to this experimental factor
-#	  # somehow this has to be decodable so we can retrieve factor values for a project?
-#	  ### this was never used - it will better be handled by a vis-like JSON property
-#	  ### e.g. projectprop.type = "VBcv:experimental factor", value = q/{ cvterm: { name: "organism", cvterm_id: 12345,
-#	  # my $type_id = $factor_term->cvterm_id;
-#	  #$project->find_or_create_related( 'projectprops',
-#	  #				  { type => $factor_term,
-#	  #				    value => "stockprops:type_id==$type_id->value",
-#	  #				  }
-#	  #				);
-#
-#	} else {
-#	  croak "could not find a cvterm for stock '$sample_name' via db:acc '$factor_source:$factor_acc'\n";
-#	}
-#
-#
-#      }
-#    }
 
   return $stock;
 }
