@@ -8,7 +8,6 @@ my $dsn = "dbi:Pg:dbname=$ENV{CHADO_DB_NAME}";
 my $schema = Bio::Chado::VBPopBio->connect($dsn, $ENV{USER}, undef, { AutoCommit => 1 });
 my $cvterms = $schema->cvterms();
 my $stocks = $schema->stocks();
-my $organisms = $schema->organisms();
 my $dbxrefs = $schema->dbxrefs();
 
 #
@@ -34,14 +33,12 @@ ok($out =~ /name/, "json check");
 $schema->txn_do(
 		sub {
 
-		  my $organism = $organisms->first;
 		  my $stock_type = $cvterms->create_with({ name => 'temporary type',
 							   cv => 'VBcv',
 							 });
 
 
-		  my $stock = $stocks->create({ organism => $organism,
-						name => 'Long green-haired stock',
+		  my $stock = $stocks->create({ name => 'Long green-haired stock',
 						uniquename => 'Green100',
 						description => 'Should never get committed',
 						type => $stock_type

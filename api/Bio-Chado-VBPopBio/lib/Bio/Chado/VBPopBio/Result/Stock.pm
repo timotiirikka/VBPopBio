@@ -367,17 +367,14 @@ sub as_data_structure {
       # we try to reduce redundancy by just having name (it's identical to external_id anyway)
       # external_id => $self->external_id,
 
-
       # make sure 'recursion' won't go too deep using $depth argument
-      # however, no depth checks for some contained objects, such as organism, cvterms etc
+      # however, no depth checks for some contained objects, such as species, cvterms etc
       type => $self->type->as_data_structure,
 
+      species => 'to do',
+      species_evidence => 'to do',
+
       props => [ map { $_->as_data_structure } $self->multiprops ],
-
-      # need to provide Result::Organism::as_data_structure:
-      organism => $self->organism ? $self->organism->as_data_structure : 'NULL',
-
-      # organism_id => $self->organism_id,
 
       ($depth > 0) ? (
 		      field_collections => [ map { $_->as_data_structure($depth) } $self->field_collections ],

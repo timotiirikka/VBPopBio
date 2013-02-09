@@ -171,13 +171,8 @@ sub create_from_isatab {
   my %genotype_assays;
   my %phenotype_assays;
 
-  my $assay_creates_stock = $cvterms->create_with({ name => 'assay creates stock', # discuss this more
-						    cv => 'VBcv',
-						  });
-  my $assay_uses_stock = $cvterms->create_with({ name => 'assay uses stock', # discuss this more
-						    cv => 'VBcv',
-						  });
-
+  my $assay_creates_stock = $types->assay_creates_sample;
+  my $assay_uses_stock = $types->assay_uses_sample;
 
   # for each stock that we already added
   while (my ($sample_id, $stock) = each %stocks) {
