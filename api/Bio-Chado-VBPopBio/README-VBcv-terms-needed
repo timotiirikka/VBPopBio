@@ -16,6 +16,11 @@ public release date = The date on or after which the data was made available to 
 
 household ID = An identifying (but ideally anonymized) name or code for a household from which a collection was made.
 
+  It would be ideal if all VBcv terms used in columns L-Z of
+  https://docs.google.com/spreadsheet/ccc?key=0AiHJk7ao3qFUdDFESklGcG5TRlJSdjVzNTg0OFZZdEE#gid=6
+  (a_collection sheet) had a common parent term so the loading code knows that they
+  are characteristics of the collection site and not the collection itself (act of collection).
+
 species identification assay = see genotype assay, phenotype assay already in VBcv
 
 project external ID = An ID of the format YYYY-AuthorSurname-Keyword(s) - should be unique with respect to all VectorBase population data submissions.
