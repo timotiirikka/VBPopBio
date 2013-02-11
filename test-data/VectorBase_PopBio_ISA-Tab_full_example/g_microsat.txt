@@ -1,7 +1,7 @@
-"Sample Name"	"Assay Name"	"Genotype Name"	Description	Type	"Term Source REF"	"Term Accession Number"	"Characteristics [microsatellite (SO:0000289)]"	"Term Source REF"	"Term Accession Number"	"Characteristics [length (PATO:0000122)]"	"Term Source REF"	"Term Accession Number"
-Sample01	Sample01.ga1	H555:123	"microsatellite: H555 length: 123"	simple_sequence_length_variation	SO	0000207	H555			123
-Sample01	Sample01.ga1	H442:666	"microsatellite: H442 length: 666"	simple_sequence_length_variation	SO	0000207	H442			666
-Sample01	Sample01.ga1	H321:43	"microsatellite: H321 length: 43"	simple_sequence_length_variation	SO	0000207	H321			43
-Sample02	Sample02.ga1	H555:129	"microsatellite: H555 length: 129"	simple_sequence_length_variation	SO	0000207	H555			129
-Sample02	Sample02.ga1	H442:700	"microsatellite: H442 length: 700"	simple_sequence_length_variation	SO	0000207	H442			700
-Sample02	Sample02.ga1	H321:81	"microsatellite: H321 length: 81"	simple_sequence_length_variation	SO	0000207	H321			81
+"Assay Name"	"Genotype Name"	Description	Type	"Term Source REF"	"Term Accession Number"	"Characteristics [microsatellite (SO:0000289)]"	"Term Source REF"	"Term Accession Number"	"Characteristics [length (PATO:0000122)]"	"Term Source REF"	"Term Accession Number"
+Sample01.ga1	H555:123	"microsatellite: H555 length: 123"	simple_sequence_length_variation	SO	0000207	H555			123
+Sample01.ga1	H442:666	"microsatellite: H442 length: 666"	simple_sequence_length_variation	SO	0000207	H442			666
+Sample01.ga1	H321:43	"microsatellite: H321 length: 43"	simple_sequence_length_variation	SO	0000207	H321			43
+Sample02.ga1	H555:129	"microsatellite: H555 length: 129"	simple_sequence_length_variation	SO	0000207	H555			129
+Sample02.ga1	H442:700	"microsatellite: H442 length: 700"	simple_sequence_length_variation	SO	0000207	H442			700
+Sample02.ga1	H321:81	"microsatellite: H321 length: 81"	simple_sequence_length_variation	SO	0000207	H321			81

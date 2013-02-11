@@ -3,10 +3,10 @@ package Bio::Chado::VBPopBio::ResultSet::Experiment::GenotypeAssay;
 use base 'Bio::Chado::VBPopBio::ResultSet::Experiment';
 use Carp;
 use strict;
+use aliased 'Bio::Chado::VBPopBio::Util::Multiprops';
 
-use Bio::Chado::VBPopBio::Util::Phenote qw/parse_phenote/;
+my %genotype_data_cache; # filename => $isatab_like_data_structure ( {sample_name}{assays}{assay_name}... )
 
-my %phenote_data_cache; # filename => assay name => [ {heading=>value, ... }, { heading=>value, ... }, ... ]
 # the last level is an array of rows in the file (hashrefs, key=>val)
 
 =head1 NAME
@@ -74,64 +74,59 @@ sub create_from_isatab {
     $genotype_assay->add_to_protocols_from_isatab($assay_data->{protocols}, $ontologies, $study);
 
 
-    # load the genotype data from the phenote file(s)
-    foreach my $phenote_file_name (keys %{$assay_data->{raw_data_files}}) {
-      my $phenote =
-	$phenote_data_cache{$isa_parser->directory.'/'.$phenote_file_name} ||=
-	  parse_phenote($phenote_file_name, $isa_parser, 'Assay');
+    # load the genotype data from the g_xxxxx ISA-Tab-like sheet(s)
+    foreach my $g_file_name (keys %{$assay_data->{raw_data_files}}) {
+      # but don't read in VCF files!
+      next if ($g_file_name =~ /\.vcf$/i);
 
-      my @prop_rows;
-      my @unique_info;
-      # now loop through the rows for this particular assay and add the genotypes first
-      foreach my $row (@{$phenote->{$assay_name}}) {
-	# gather this for each genotype and its preceding properties
-	push @unique_info, $row->{'type Name'}, $row->{'Description/Value'};
+      my $genotype_data =
+	$genotype_data_cache{$g_file_name} ||=
+	  $isa_parser->parse_study_or_assay($g_file_name, undef,
+					    {
+					     'Type' => 'attribute',
+					     'Genotype Name' => 'reusable node',
+					    });
 
-	if ($row->{'prop?'}) {
-	  push @prop_rows, $row; # deal with props later
-	} else {
-	  # create the genotype
-	  my $type;
-	  if ($row->{'type ID'} =~ /^(.+):(.+)$/) {
-	    my ($db, $acc) = ($1, $2);
-	    $type = $dbxrefs->find({ accession => $acc, version => '', 'db.name' => $db },
-				   {
-				    join => 'db' })->cvterm or croak "can't find cvterm for $db:$acc";
+#      warn "doing $assay_name from $g_file_name";
+#      use Data::Dumper;
+#      warn Dumper($genotype_data);
+#die;
+      if ($genotype_data->{assays}{$assay_name}{genotypes}) {
+	while (my ($name, $data) = each %{$genotype_data->{assays}{$assay_name}{genotypes}}) {
+	  #...
+	  # assay stable id + Genotype Name
+	  my $uniquename = "$stable_id:$name";
+	  my $description = $data->{description} || '';
+	  my $type = $cvterms->find_by_accession($data->{type});
+	  unless (defined $type) {
+	    $schema->defer_exception_once("Cannot load Type ontology term for genotype $name in $g_file_name");
+	    $type = $schema->types->placeholder;
 	  }
 
-	  my $description = $row->{'Description/Value'};
-	  croak "no description for genotype of $assay_name" unless ($description);
-
 	  my $genotype = $genotypes->find_or_create({
-						     name => $description,
-						     uniquename => join(':',@unique_info),
+						     name => $name,
+						     uniquename => $uniquename,
 						     description => $description,
 						     type => $type,
 						    });
 
-	  @unique_info = ();
-
 	  # link to the nd_experiment
 	  my $assay_link = $genotype->find_or_create_related('nd_experiment_genotypes',
-							     {
-							      nd_experiment => $genotype_assay });
+							     { nd_experiment => $genotype_assay });
 
-	  # now add the genotypeprops that we already encountered in the phenote file
-	  # this time, only add a ontologised term (silently skip any with no db:acc provided
-	  while (my $prop_row = shift @prop_rows) {
-	    if ($prop_row->{'type ID'} =~ /^(.+):(.+)$/) {
-	      my ($db, $acc) = ($1, $2);
-	      my $type = $dbxrefs->find({ accession => $acc, version => '', 'db.name' => $db },
-					{
-					 join => 'db' })->cvterm or croak "can't find cvterm for $db:$acc";
 
-	      $genotype->find_or_create_related('genotypeprops',
-						{ type => $type,
-						  value => $prop_row->{'Description/Value'},
-						});
-	    }
-	  }
+	  #
+	  # Deal with multiple "Characteristics [term name (ONTO:accession)]" columns
+	  # by adding multiprops for them
+	  #
+	  Multiprops->add_multiprops_from_isatab_characteristics
+	    ( row => $genotype,
+	      prop_relation_name => 'genotypeprops',
+	      characteristics => $data->{characteristics} );
+
 	}
+      } else {
+	$schema->defer_exception_once("possibly missing genotype data for $assay_name in $g_file_name");
       }
     }
   }

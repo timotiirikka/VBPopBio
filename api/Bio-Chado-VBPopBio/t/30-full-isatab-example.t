@@ -35,10 +35,10 @@ $schema->txn_do_deferred(
 		  isa_ok($geo, "Bio::Chado::VBPopBio::Result::Geolocation", "geo is correct class");
 
 
-		  is($stock->genotype_assays->count, 2, "stock has two genotype_assays");
+		  is($stock->genotype_assays->count, 3, "stock has three genotype_assays");
 
 		  # karyotype assay is loaded first (comes first in investigation sheet)
-		  my ($ka, $ga) = $stock->genotype_assays->all;
+		  my ($ka, $ga, $sa) = $stock->genotype_assays->all;
 
 #		  isa_ok($ka, "Bio::Chado::VBPopBio::Result::Experiment::GenotypeAssay", "genotype_assay is correct class");
 
