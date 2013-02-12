@@ -122,7 +122,7 @@ sub create_from_isatab {
 	  Multiprops->add_multiprops_from_isatab_characteristics
 	    ( row => $genotype,
 	      prop_relation_name => 'genotypeprops',
-	      characteristics => $data->{characteristics} );
+	      characteristics => $data->{characteristics} ) if ($data->{characteristics});
 
 	}
       } else {

@@ -310,14 +310,43 @@ sub add_to_protocols_from_isatab {
 	$protocol_type = $schema->types->placeholder;
       }
 
-      my $protocol = $protocols->find_or_create({
-						 name => $study->{study_identifier}.":".$protocol_ref,
-						 type => $protocol_type,
-						});
+      my $protocol = $protocols->find_or_new({
+					      name => $self->stable_id.":".$protocol_ref, # $study->{study_identifier}.":".$protocol_ref,
+					      type => $protocol_type,
+					     });
 
-      # set the description
-      if (defined $protocol_info->{study_protocol_description}) {
-	$protocol->description($protocol_info->{study_protocol_description});
+
+      # only add more info to $protocol if it's newly created
+      unless ($protocol->in_storage) {
+	$protocol->insert; #now it's in the DB
+	# set the description
+	if (defined $protocol_info->{study_protocol_description}) {
+	  $protocol->description($protocol_info->{study_protocol_description});
+	}
+
+	if (defined $protocol_info->{study_protocol_component_lookup}) {
+	  while (my ($name, $data) = each %{$protocol_info->{study_protocol_component_lookup}}) {
+	    # just add the component type as a single term multiprop
+	    my $type;
+	    if ($data->{study_protocol_component_type_term_accession_number} &&
+		$data->{study_protocol_component_type_term_source_ref}) {
+	      $type = $cvterms->find_by_accession
+		({ term_source_ref => $data->{study_protocol_component_type_term_source_ref},
+		   term_accession_number => $data->{study_protocol_component_type_term_accession_number} });
+	      if (!defined $type) {
+		$schema->defer_exception_once("failed to find term for $data->{study_protocol_component_type} ($data->{study_protocol_component_type_term_source_ref}:$data->{study_protocol_component_type_term_accession_number})");
+	      }
+	    }
+	    my @cvterm_sentence = ($schema->types->protocol_component);
+	    my $text_value;
+	    if (defined $type) {
+	      push @cvterm_sentence, $type;
+	    } else {
+	      $text_value = "$name: $data->{study_protocol_component_type}";
+	    }
+	    $protocol->add_multiprop(Multiprop->new(cvterms=>\@cvterm_sentence, value=>$text_value));
+	  }
+	}
       }
 
       # link this experiment to the protocol
@@ -364,7 +393,7 @@ sub add_to_protocols_from_isatab {
 	  #
 
 	  my @cvterm_sentence = ($param_type_cvterm);
-	  my $param_value; # free text or number
+	  my $param_value;	# free text or number
 
 	  # the param value is either a cvterm, or a text value with units or a text value
 	  if ($param_data->{term_source_ref} && length($param_data->{term_accession_number})) {
@@ -393,7 +422,6 @@ sub add_to_protocols_from_isatab {
 					     ));
 	}
       }
-
       push @protocols, $protocol;
     }
   }

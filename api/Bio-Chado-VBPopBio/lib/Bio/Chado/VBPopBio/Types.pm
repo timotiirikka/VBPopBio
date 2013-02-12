@@ -291,4 +291,19 @@ sub assay_uses_sample {
 					     });
 }
 
+=head2 protocol_component
+
+VBcv:protocol component
+
+=cut
+
+sub protocol_component {
+  my $self = shift;
+  return $self->schema->cvterms->create_with({ name => 'protocol component',
+					       cv => 'VBcv',
+					       db => 'VBcv',
+					       description => 'A piece of equipment, software or other component of a protocol which is always the same from assay to assay.',
+					     });
+}
+
 1;

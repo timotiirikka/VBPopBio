@@ -1,8 +1,8 @@
 "ONTOLOGY SOURCE REFERENCE"
-"Term Source Name"	MO	EFO	OBI	UO	GAZ	NCBITaxon	PATO	MIRO	efo	IDOMAL	VariO	SO
+"Term Source Name"	MO	EFO	OBI	UO	GAZ	NCBITaxon	PATO	MIRO	efo	IDOMAL	VariO	HELLO	SO
 "Term Source File"	http://mged.sourceforge.net/ontologies/MGEDontology.php
-"Term Source Version"	1.3.0.1	49584	47893	49121	46911	47845	47893	49589	49584	47619	49250	49414
-"Term Source Description"	"The Microarray Ontology"	"Experimental Factor Ontology"	"Ontology for Biomedical Investigations"	"Units of measurement"	Gazetteer	"NCBI organismal classification"	"Ontology for Biomedical Investigations"	"Mosquito insecticide resistance"	"Experimental Factor Ontology"	"Malaria Ontology"	"Variation Ontology"	"Sequence types and features"
+"Term Source Version"	1.3.0.1	49584	47893	49750	46911	47845	47893	49589	49584	47619	49250	12345	49414
+"Term Source Description"	"The Microarray Ontology"	"Experimental Factor Ontology"	"Ontology for Biomedical Investigations"	"Units of measurement"	Gazetteer	"NCBI organismal classification"	"Ontology for Biomedical Investigations"	"Mosquito insecticide resistance"	"Experimental Factor Ontology"	"Malaria Ontology"	"Variation Ontology"	"Place holder"	"Sequence types and features"
 
 STUDY
 "Study Identifier"	2012-VectorBase-full-example
@@ -53,9 +53,9 @@ STUDY
 "Study Protocol Description"		"Species were identified by morphological and genotypic characteristics"	"Inversion karyotypes were determined via Giemsa staining and visual inspection under light microscopy"	"Microsatellite lengths were determined by PCR"	"The dose response was assayed using the WHO paper kit"	"Sequencing with Illumina HiSeq, alignment with bowtie and SNP calling with SamTools"
 "Study Protocol URI"	http://whqlibdoc.who.int/offset/WHO_OFFSET_13_(part2).pdf
 "Study Protocol Version"
-"Study Protocol Parameters Name"			"cell type;time of day"		"insecticidal substance"
-"Study Protocol Parameters Name Term Accession Number"			0000324;0000012		10000239
-"Study Protocol Parameters Name Term Source REF"			EFO;VBcv		MIRO
+"Study Protocol Parameters Name"			"cell type;staining duration"		"insecticidal substance"
+"Study Protocol Parameters Name Term Accession Number"			0000324;0000433		10000239
+"Study Protocol Parameters Name Term Source REF"			EFO;EFO		MIRO
 "Study Protocol Components Name"			"microscope manufacturer;stain"			sequencer
 "Study Protocol Components Type"			Olympus;Giemsa			"Illumina HiSeq 2000"
 "Study Protocol Components Type Term Accession Number"			;0000552			0004203

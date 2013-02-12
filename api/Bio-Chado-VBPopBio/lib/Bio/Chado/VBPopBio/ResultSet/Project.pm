@@ -219,7 +219,7 @@ sub create_from_isatab {
       }
 
       # PHENOTYPE ASSAY
-      if (0 && $assay->{study_assay_measurement_type} eq 'phenotype assay') {
+      if ($assay->{study_assay_measurement_type} eq 'phenotype assay') {
 	if (defined(my $sample_data = $assay->{samples}{$sample_id})) {
 	  while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
 	    $phenotype_assays{$assay_name} ||= $schema->phenotype_assays->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study, $parser);
