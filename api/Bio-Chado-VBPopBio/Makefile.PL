@@ -17,6 +17,7 @@ WriteMakefile(
 	'Bio::Parser::ISATab' => 0,
         'Iterator::Simple' => 0,
 	'DateTime::Format::ISO8601' => 0,
+	'Tie::Hash::Indexed' => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Bio-Chado-VBPopBio-*' },

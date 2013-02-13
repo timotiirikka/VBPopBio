@@ -250,6 +250,13 @@ sub annotate_from_isatab {
   if (defined $assay_data->{description}) {
     $self->description($assay_data->{description});
   }
+
+  Multiprops->add_multiprops_from_isatab_characteristics
+    (
+     row => $self,
+     prop_relation_name => 'nd_experimentprops',
+     characteristics => $assay_data->{characteristics},
+    ) if ($assay_data->{characteristics});
 }
 
 
@@ -280,6 +287,7 @@ sub add_to_protocols_from_isatab {
     my $dbxrefs = $schema->dbxrefs;
 
     while (my ($protocol_ref, $protocol_data) = each %{$protocols_data}) {
+
       my $protocol_info = $study->{study_protocol_lookup}{$protocol_ref};
 
       unless ($study->{study_protocol_lookup}{$protocol_ref}) {
@@ -351,6 +359,11 @@ sub add_to_protocols_from_isatab {
 
       # link this experiment to the protocol
       my $nd_experiment_protocol = $self->find_or_create_related('nd_experiment_protocols', {  nd_protocol => $protocol } );
+
+      # handle Date and Performer (store as experimentprops)
+      # figure out what to do if there are multiple protocols for one experiment
+      # as the date/performer info could be overwritten (but probably should not be)
+      warn "Should be validating/loading Date(s) and also Performer attribs for assays";
 
       if ($protocol_data->{parameter_values}) {
 

@@ -40,7 +40,8 @@ sub create {
 
 =head2 find_and_link_existing
 
-finds the existing experiment object (if there), links it to the project and returns it.
+Finds the existing experiment object (if there) via $assay_name if it's a stable_id.
+Links it to the project and returns it.
 Otherwise returns undef.
 
 =cut

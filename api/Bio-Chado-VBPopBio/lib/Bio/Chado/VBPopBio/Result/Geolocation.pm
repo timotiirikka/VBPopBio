@@ -77,13 +77,6 @@ sub as_data_structure {
 	  altitude => $self->altitude,
 	  name => $self->description,
 	  props => [ map { $_->as_data_structure } $self->multiprops ],
-
-#	  nd_geolocationprops => [
-#				  map {
-#				    { $_->get_columns,
-#					'type.name' => $_->type->name, }
-#				  } $self->nd_geolocationprops
-#				 ],
 	 };
 }
 
