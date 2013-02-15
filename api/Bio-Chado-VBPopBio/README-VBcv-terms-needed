@@ -54,3 +54,10 @@ has genomic variation data = A cvterm used internally within VectorBase to tag s
 
 protocol component = A piece of equipment, software or other component of a protocol which is always the same from assay to assay.
 
+#
+# hack alert!!
+#
+protocol parameter group 1 = A cvterm used internally within VectorBase Chado to group otherwise identical parameter values (e.g. multiple insecticides).
+protocol parameter group 2 = see above
+protocol parameter group 3 = see above
+

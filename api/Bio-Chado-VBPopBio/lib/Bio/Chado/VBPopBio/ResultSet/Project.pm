@@ -196,7 +196,7 @@ sub create_from_isatab {
       }
 
       # SPECIES IDENTIFICATION ASSAY
-      if ($assay->{study_assay_measurement_type} eq 'species identification assay') {
+      elsif ($assay->{study_assay_measurement_type} eq 'species identification assay') {
 	if (defined(my $sample_data = $assay->{samples}{$sample_id})) {
 	  while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
 	    $species_identification_assays{$assay_name} ||= $schema->species_identification_assays->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study);
@@ -209,7 +209,7 @@ sub create_from_isatab {
 
 
       # GENOTYPE ASSAY
-      if ($assay->{study_assay_measurement_type} eq 'genotype assay') {
+      elsif ($assay->{study_assay_measurement_type} eq 'genotype assay') {
 	if (defined(my $sample_data = $assay->{samples}{$sample_id})) {
 	  while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
 	    $genotype_assays{$assay_name} ||= $schema->genotype_assays->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study, $parser);
@@ -219,13 +219,18 @@ sub create_from_isatab {
       }
 
       # PHENOTYPE ASSAY
-      if ($assay->{study_assay_measurement_type} eq 'phenotype assay') {
+      elsif ($assay->{study_assay_measurement_type} eq 'phenotype assay') {
 	if (defined(my $sample_data = $assay->{samples}{$sample_id})) {
 	  while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
 	    $phenotype_assays{$assay_name} ||= $schema->phenotype_assays->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study, $parser);
 	    $phenotype_assays{$assay_name}->add_to_stocks($stock, { type => $assay_uses_stock });
 	  }
 	}
+      }
+
+      # WRONG ASSAY TYPE
+      else {
+	$schema->defer_exception_once("Unknown Study Assay Measurement Type: $assay->{study_assay_measurement_type}");
       }
     }
 

@@ -90,6 +90,12 @@ sub find_or_create_from_isatab {
 	$contact_data->{study_person_address};
     my $description = $name;
     $description .= " ($place)" if ($place && length($description)+length($place)+3 < 255);
+
+    # tidy up errant multiple whitespace
+    $description =~ s/\s+/ /g;
+    $description =~ s/\s+$//;
+    $description =~ s/^\s+//;
+
     $contact->description($description);
 
     $contact->update;

@@ -408,6 +408,14 @@ sub add_to_protocols_from_isatab {
 	  my @cvterm_sentence = ($param_type_cvterm);
 	  my $param_value;	# free text or number
 
+	  # prefix multiprop with "protocol parameter group 1" term
+	  # where we have repeated parameters, e.g.
+          # Parameter Value [insecticide1] Parameter Value [insecticide2]
+	  # Parameter Value [concentration1] Parameter Value [concentration2]
+	  if ($param_name =~ /(\d+)$/) {
+	    unshift @cvterm_sentence, $schema->types->protocol_parameter_group($1);
+	  }
+
 	  # the param value is either a cvterm, or a text value with units or a text value
 	  if ($param_data->{term_source_ref} && length($param_data->{term_accession_number})) {
 	    my $param_value_cvterm = $cvterms->find_by_accession($param_data);

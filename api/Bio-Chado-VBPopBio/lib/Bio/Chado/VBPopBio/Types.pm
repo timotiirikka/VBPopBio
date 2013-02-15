@@ -306,4 +306,25 @@ sub protocol_component {
 					     });
 }
 
+=head2 protocol_parameter_group
+
+TAKES AN ARGUMENT!
+integer 1 .. 3
+
+=cut
+
+sub protocol_parameter_group {
+  my ($self, $int) = @_;
+  my $schema = $self->schema;
+  unless ($int =~ /^[123]$/) {
+    $schema->defer_exception_once("Protocol parameter group number '$int' not valid");
+    return $self->placeholder;
+  }
+  return $schema->cvterms->create_with({ name => "protocol parameter group $int",
+					 cv => 'VBcv',
+					 db => 'VBcv',
+					 description => 'A cvterm used internally within VectorBase Chado to group otherwise identical parameter values (e.g. multiple insecticides).',
+					     });
+}
+
 1;

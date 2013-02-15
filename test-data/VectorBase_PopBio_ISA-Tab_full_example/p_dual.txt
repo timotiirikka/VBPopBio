@@ -1,0 +1,2 @@
+"Assay Name"	"Phenotype Name"	Observable	"Term Source REF"	"Term Accession Number"	Attribute	"Term Source REF"	"Term Accession Number"	Value	"Term Source REF"	"Term Accession Number"	Unit	"Term Source REF"	"Term Accession Number"
+Sample01.dual	"mortality rate: 77%"	resistance	MIRO	00000000	"mortality rate"	VBcv	0000703	77			percent	UO	0000187
