@@ -4,6 +4,7 @@ use base 'Bio::Chado::Schema::Result::Contact::Contact';
 __PACKAGE__->load_components('+Bio::Chado::VBPopBio::Util::Subclass');
 __PACKAGE__->subclass({
 		       project_contacts => 'Bio::Chado::VBPopBio::Result::Linker::ProjectContact',
+		       nd_experiment_contacts => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentContact',
 		       type => 'Bio::Chado::VBPopBio::Result::Cvterm',
 		      });
 

@@ -13,6 +13,7 @@ __PACKAGE__->subclass({ nd_experiment_stocks => 'Bio::Chado::VBPopBio::Result::L
 		        nd_experiment_genotypes => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentGenotype',
 		        nd_experiment_phenotypes => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentPhenotype',
 		        nd_experiment_dbxrefs => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentDbxref',
+		        nd_experiment_contacts => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentContact',
 			type => 'Bio::Chado::VBPopBio::Result::Cvterm',
 		      });
 
@@ -22,6 +23,7 @@ __PACKAGE__->resultset_attributes({ order_by => 'nd_experiment_id' });
 use aliased 'Bio::Chado::VBPopBio::Util::Multiprops';
 use aliased 'Bio::Chado::VBPopBio::Util::Multiprop';
 use aliased 'Bio::Chado::VBPopBio::Util::Extra';
+use aliased 'Bio::Chado::VBPopBio::Util::Date';
 
 =head1 NAME
 
@@ -282,9 +284,11 @@ sub add_to_protocols_from_isatab {
 
   if ($protocols_data) {
     my $schema = $self->result_source->schema;
+    my $types = $schema->types;
     my $protocols = $schema->protocols;
     my $cvterms = $schema->cvterms;
     my $dbxrefs = $schema->dbxrefs;
+    my $contacts = $schema->contacts;
 
     while (my ($protocol_ref, $protocol_data) = each %{$protocols_data}) {
 
@@ -315,7 +319,7 @@ sub add_to_protocols_from_isatab {
 	# maybe create a placeholder here and store the error
 	# $protocol_info->{study_protocol_type}
 	$schema->defer_exception("Study Protocol Type ontology term for protocol $protocol_ref missing or not found\n");
-	$protocol_type = $schema->types->placeholder;
+	$protocol_type = $types->placeholder;
       }
 
       my $protocol = $protocols->find_or_new({
@@ -345,7 +349,7 @@ sub add_to_protocols_from_isatab {
 		$schema->defer_exception_once("failed to find term for $data->{study_protocol_component_type} ($data->{study_protocol_component_type_term_source_ref}:$data->{study_protocol_component_type_term_accession_number})");
 	      }
 	    }
-	    my @cvterm_sentence = ($schema->types->protocol_component);
+	    my @cvterm_sentence = ($types->protocol_component);
 	    my $text_value;
 	    if (defined $type) {
 	      push @cvterm_sentence, $type;
@@ -363,7 +367,37 @@ sub add_to_protocols_from_isatab {
       # handle Date and Performer (store as experimentprops)
       # figure out what to do if there are multiple protocols for one experiment
       # as the date/performer info could be overwritten (but probably should not be)
-      warn "Should be validating/loading Date(s) and also Performer attribs for assays";
+      if (my $performer_email = $protocol_data->{performer}) {
+	my $study_contact = $study->{study_contact_lookup}{$performer_email};
+	my $contact = $contacts->find_or_create_from_isatab($study_contact);
+	if ($contact) {
+	  $self->add_to_contacts($contact);
+	} else {
+	  $schema->defer_exception_once("Can't find assay (protocol $protocol_ref) performer by email '$performer_email' in Study Contacts section");
+	}
+      }
+      if (my $date = $protocol_data->{date}) {
+	my ($start_date, $end_date) = split qr{/}, $date;
+	if ($start_date && $end_date) {
+	  my $valid_start = Date->simple_validate_date($start_date, $self);
+	  my $valid_end = Date->simple_validate_date($end_date, $self);
+	  if ($valid_start && $valid_end) {
+	    $self->add_multiprop(Multiprop->new(cvterms=>[$types->start_date], value=>$valid_start));
+	    $self->add_multiprop(Multiprop->new(cvterms=>[$types->end_date], value=>$valid_end));
+	  } else {
+	    $schema->defer_exception_once("Cannot parse start/end date '$date' for assay (protocol $protocol_ref).");
+	  }
+	} elsif ($start_date) {
+	  my $valid_date = Date->simple_validate_date($start_date, $self);
+	  if ($valid_date) {
+	    $self->add_multiprop(Multiprop->new(cvterms=>[$types->date], value=>$valid_date));
+	  } else {
+	    $schema->defer_exception_once("Cannot parse date '$date' for assay (protocol $protocol_ref).");
+	  }
+	} else {
+	  $schema->defer_exception_once("Some problem with date string '$date' in assay (protocol $protocol_ref).")
+	}
+      }
 
       if ($protocol_data->{parameter_values}) {
 
@@ -387,7 +421,7 @@ sub add_to_protocols_from_isatab {
 	       });
 	    unless (defined $param_type_cvterm) {
 	      $schema->defer_exception("Cant find term '$param_type_db:$param_type_acc' for protocol parameter '$param_name'");
-	      $param_type_cvterm = $schema->types->placeholder;
+	      $param_type_cvterm = $types->placeholder;
 	    }
 	  } else {
 	    $schema->defer_exception("Protocol parameter '$param_name' has no ontology term");
@@ -413,7 +447,7 @@ sub add_to_protocols_from_isatab {
           # Parameter Value [insecticide1] Parameter Value [insecticide2]
 	  # Parameter Value [concentration1] Parameter Value [concentration2]
 	  if ($param_name =~ /(\d+)$/) {
-	    unshift @cvterm_sentence, $schema->types->protocol_parameter_group($1);
+	    unshift @cvterm_sentence, $types->protocol_parameter_group($1);
 	  }
 
 	  # the param value is either a cvterm, or a text value with units or a text value
@@ -421,7 +455,7 @@ sub add_to_protocols_from_isatab {
 	    my $param_value_cvterm = $cvterms->find_by_accession($param_data);
 	    unless (defined $param_value_cvterm) {
 	      $schema->defer_exception("Can't find parameter value cvterm $param_data->{term_source_ref}:($param_data->{term_accession_number}");
-	      $param_value_cvterm = $schema->types->placeholder;
+	      $param_value_cvterm = $types->placeholder;
 	    }
 	    push @cvterm_sentence, $param_value_cvterm;
 	  } elsif (length($param_data->{value}) && $param_data->{unit}
@@ -430,7 +464,7 @@ sub add_to_protocols_from_isatab {
 	    my $param_unit_cvterm = $cvterms->find_by_accession($param_data->{unit});
 	    unless (defined $param_unit_cvterm) {
 	      $schema->defer_exception("Can't find parameter value's unit cvterm: $param_data->{unit}{term_source_ref}:$param_data->{unit}{term_accession_number}");
-	      $param_unit_cvterm = $schema->types->placeholder;
+	      $param_unit_cvterm = $types->placeholder;
 	    }
 	    push @cvterm_sentence, $param_unit_cvterm;
 	    $param_value = $param_data->{value};
@@ -722,6 +756,7 @@ sub basic_info {
 	  description => $self->description,
           props => [ map { $_->as_data_structure } $self->multiprops ],
 	  protocols => [ map { $_->as_data_structure } $self->protocols ],
+	  performers => [ map { $_->as_data_structure } $self->contacts ],
 	 );
 }
 

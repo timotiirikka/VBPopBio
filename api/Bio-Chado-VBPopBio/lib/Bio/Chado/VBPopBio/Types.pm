@@ -83,6 +83,19 @@ sub experiment_external_ID {
      });
 }
 
+=head2 date
+
+VBcv:date
+
+=cut
+
+sub date {
+  my $self = shift;
+  return $self->schema->cvterms->find_by_name({ term_source_ref => 'VBcv',
+						term_name => 'date' });
+
+}
+
 =head2 start_date
 
 VBcv:start date
