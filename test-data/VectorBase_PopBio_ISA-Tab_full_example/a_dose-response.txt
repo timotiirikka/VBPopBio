@@ -1,5 +1,5 @@
 "Sample Name"	"Assay Name"	"Protocol REF"	Performer	Date	"Comment [note]"	"Parameter Value [insecticidal substance]"	"Term Source REF"	"Term Accession Number"	"Raw Data File"
-Sample01	Sample01.dr.DDT	PROTO5				DDT	MIRO	10000157	p_DR-DDT.txt
-Sample01	Sample01.dr.dieldrin	PROTO5				dieldrin	MIRO	10000160	p_DR-dieldrin.txt
-Sample02	Sample02.dr.DDT	PROTO5				DDT	MIRO	10000157	p_DR-DDT.txt
-Sample02	Sample02.dr.dieldrin	PROTO5				dieldrin	MIRO	10000160	p_DR-dieldrin.txt
+Sample01	Sample01.dr.DDT	PROTO5			"possible fungal infection"	DDT	MIRO	10000157	p_DR-DDT.txt
+Sample01	Sample01.dr.dieldrin	PROTO5			"possible funcal infection"	dieldrin	MIRO	10000160	p_DR-dieldrin.txt
+Sample02	Sample02.dr.DDT	PROTO5			"possible bacterial infection"	DDT	MIRO	10000157	p_DR-DDT.txt
+Sample02	Sample02.dr.dieldrin	PROTO5			"possible bacterial infection"	dieldrin	MIRO	10000160	p_DR-dieldrin.txt

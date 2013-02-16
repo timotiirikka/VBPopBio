@@ -228,4 +228,44 @@ sub add_multiprops_from_isatab_characteristics {
   }
 }
 
+=head2 add_multiprops_from_isatab_comments
+
+usage Multiprops->add_multiprops_from_isatab_comments
+        ( row => $stock,
+          prop_relation_name => 'stockprops',
+          comments => $study->{samples}{my_sample}{comments} );
+
+Adds a multiprop to the Chado object for each "Comments [some topic or other] column.
+If the column heading is not ontologised or the term can't be found, an exception will be thrown.
+Units will be added as appropriate.
+
+=cut
+
+sub add_multiprops_from_isatab_comments {
+  my ($class, %args) = @_;
+
+  # check for required args
+  $args{$_} or confess "must provide $_ arg"
+    for qw/row prop_relation_name comments/;
+
+  my $row = delete $args{row};
+  my $comments = delete $args{comments};
+  my $prop_relation_name = delete $args{prop_relation_name};
+
+  %args and confess "invalid option(s): ".join(', ', sort keys %args);
+
+  my $schema = $row->result_source->schema;
+
+  my $comment_term = $schema->types->comment;
+
+  # for each comments column
+  while (my ($cname, $cdata) = each %{$comments}) {
+    my $text = "[$cname] $cdata";
+    $class->add_multiprop
+      ( row => $row,
+	prop_relation_name => $prop_relation_name,
+	multiprop => Multiprop->new(cvterms=>[ $comment_term ], value=>$text) );
+  }
+}
+
 1;

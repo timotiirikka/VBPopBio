@@ -87,7 +87,16 @@ sub find_or_create_from_isatab {
   Multiprops->add_multiprops_from_isatab_characteristics
     ( row => $stock,
       prop_relation_name => 'stockprops',
-      characteristics => $sample_data->{characteristics} );
+      characteristics => $sample_data->{characteristics} ) if ($sample_data->{characteristics});
+
+  #
+  # Deal with "Comments [a topic]" columns
+  # by adding multiprops for them
+  #
+  Multiprops->add_multiprops_from_isatab_comments
+    ( row => $stock,
+      prop_relation_name => 'stockprops',
+      comments => $sample_data->{comments} ) if ($sample_data->{comments});
 
   if ($sample_data->{factor_values}) {
     warn "Warning: Not currently loading factor values for samples\n" unless ($self->{FV_WARNED_ALREADY}++);

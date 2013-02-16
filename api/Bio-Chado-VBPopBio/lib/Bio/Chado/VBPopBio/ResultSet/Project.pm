@@ -143,6 +143,10 @@ sub create_from_isatab {
     $project->add_to_contacts($contact) if ($contact);
   }
 
+  if ($study->{study_factors} && @{$study->{study_factors}}) {
+    warn "Not currently loading Study Factors (but they are in the ISA-Tab)\n";
+  }
+
   # create stand-alone stocks
   # these are pulled out of the $study hash tree in the order
   # they were first seen in the ISA-Tab files

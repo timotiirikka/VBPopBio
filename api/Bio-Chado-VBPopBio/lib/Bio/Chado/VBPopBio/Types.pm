@@ -246,6 +246,19 @@ sub description {
 					     });
 }
 
+=head2 comment
+
+=cut
+
+sub comment {
+  my $self = shift;
+  return $self->schema->cvterms->create_with({ name => 'comment',
+					       cv => 'VBcv',
+					       db => 'VBcv',
+					       description => 'Used to identify multiprops as comments in Chado/JSON.',
+					     });
+}
+
 =head2 study_design
 
 EFO:study design

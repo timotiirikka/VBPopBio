@@ -259,6 +259,14 @@ sub annotate_from_isatab {
      prop_relation_name => 'nd_experimentprops',
      characteristics => $assay_data->{characteristics},
     ) if ($assay_data->{characteristics});
+
+  Multiprops->add_multiprops_from_isatab_comments
+    (
+     row => $self,
+     prop_relation_name => 'nd_experimentprops',
+     comments => $assay_data->{comments},
+    ) if ($assay_data->{comments});
+
 }
 
 
