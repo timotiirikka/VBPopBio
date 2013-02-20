@@ -5,6 +5,10 @@
 #
 # e.g. if prefix is GO then make the cvtermpath for all cvterms with dbxrefs with db.name = 'GO'
 #
+# recursion code taken from GMOD's chado/bin/make_cvtermpath.pl thanks to the author of that!
+#
+# known limitations: RELATIONSHIP TYPES ARE COMPLETELY IGNORED!!
+#
 
 use strict;
 use lib 'lib';  # this is so that I don't have to keep installing BCNA for testing
