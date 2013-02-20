@@ -38,6 +38,52 @@ sub as_data_structure {
 }
 
 
+=head2 direct_parents
+
+ Usage: $self->direct_parents
+ Desc:  get only the direct parents of the cvterm (from the cvtermpath)
+ Ret:   L<Bio::Chado::Schema::Result::Cv::Cvterm>
+ Args:  none
+ Side Effects: none
+
+NOTE: This method requires that your C<cvtermpath> table is populated.
+
+=cut
+
+sub direct_parents {
+    my $self = shift;
+    return
+        $self->search_related(
+            'cvtermpath_subjects',
+            {
+                pathdistance => 1,
+            } )->search_related( 'object');
+}
+
+=head2 direct_children
+
+ Usage: $self->direct_children
+ Desc:  find only the direct children of your term
+ Ret:   L<Bio::Chado::Schema::Result::Cv::Cvterm>
+ Args:  none
+ Side Effects: none
+
+NOTE: This method requires that your C<cvtermpath> table is populated.
+
+=cut
+
+sub direct_children {
+    my $self = shift;
+    return
+        $self->search_related(
+            'cvtermpath_objects',
+            {
+                pathdistance => 1,
+            }
+        )->search_related('subject');
+}
+
+
 =head1 AUTHOR
 
 VectorBase, C<< <info at vectorbase.org> >>
