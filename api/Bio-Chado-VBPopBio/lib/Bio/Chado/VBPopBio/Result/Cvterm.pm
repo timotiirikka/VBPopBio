@@ -3,6 +3,9 @@ package Bio::Chado::VBPopBio::Result::Cvterm;
 use base 'Bio::Chado::Schema::Result::Cv::Cvterm';
 __PACKAGE__->load_components('+Bio::Chado::VBPopBio::Util::Subclass');
 __PACKAGE__->subclass({
+		       dbxref => 'Bio::Chado::VBPopBio::Result::Dbxref',
+		       cvtermpath_subjects => 'Bio::Chado::VBPopBio::Result::Cvtermpath',
+		       cvtermpath_objects => 'Bio::Chado::VBPopBio::Result::Cvtermpath',
 		       # we could have a huge list of relationships here
 		       # e.g. nd_experiments, stocks...
                        # but let's add them if/as we need them
@@ -33,7 +36,7 @@ sub as_data_structure {
   my ($self) = @_;
   return {
 	  name => $self->name,
-	  accession => $self->dbxref->db->name().':'.$self->dbxref->accession(),
+	  accession => $self->dbxref->as_string,
 	 };
 }
 
