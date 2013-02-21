@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 #
-# usage: ./make_cvtermpath.pl PREFIX | psql -q $CHADO_DB_NAME
+# usage: bin/make_cvtermpath.pl PREFIX | psql -q $CHADO_DB_NAME
 #
 # e.g. if prefix is GO then make the cvtermpath for all cvterms with dbxrefs with db.name = 'GO'
 #
