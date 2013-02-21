@@ -11,7 +11,7 @@
 #
 
 use strict;
-use lib 'lib';  # this is so that I don't have to keep installing BCNA for testing
+use lib 'lib';  # this is so that Bio::Chado::VBPopBio does not actually have to be installed
 use Bio::Chado::VBPopBio;
 use Getopt::Long;
 
@@ -77,7 +77,6 @@ sub recurse {
 
       $tdist--;
     }
-    $tdist = $dist;
     recurse([@$subjects,$object],$dist+1);
   }
 }
