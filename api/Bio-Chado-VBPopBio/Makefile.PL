@@ -15,6 +15,7 @@ WriteMakefile(
         'Test::More' => 0,
 	'DBIx::Class::DynamicSubclass' => 0,
 	'Bio::Parser::ISATab' => 0,
+	'Bio::Chado::Schema' => 0.2,
         'Iterator::Simple' => 0,
 	'DateTime::Format::ISO8601' => 0,
 	'Tie::Hash::Indexed' => 0,
