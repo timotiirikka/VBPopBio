@@ -395,23 +395,24 @@ sub multiprops {
     );
 }
 
-=head2 multiprop
-
-get a single multiprop with the specified cvterm at position one in chain.
-
-usage: $multiprop = $project->multiprop($submission_date_cvterm);
-
-=cut
-
-sub multiprop {
-  my ($self, $cvterm) = @_;
-
-  return Multiprops->get_multiprops
-    ( row => $self,
-      prop_relation_name => 'projectprops',
-      filter => $cvterm,
-    );
-}
+#DEPRECATED DON'T THINK IT'S USED ANYWHERE
+# =head2 multiprop
+# 
+# get a single multiprop with the specified cvterm at position one in chain.
+# 
+# usage: $multiprop = $project->multiprop($submission_date_cvterm);
+# 
+# =cut
+# 
+# sub multiprop {
+#   my ($self, $cvterm) = @_;
+# 
+#   return Multiprops->get_multiprops
+#     ( row => $self,
+#       prop_relation_name => 'projectprops',
+#       filter => $cvterm,
+#     );
+# }
 
 
 =head2 add_to_stocks

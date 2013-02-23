@@ -55,38 +55,13 @@ sub create_from_isatab {
     $species_identification_assay->external_id($assay_name);
     my $stable_id = $species_identification_assay->stable_id($project);
 
-    # add description, characteristics etc
+    # add description, characteristics etc (INCLUDING THE 'species assay result's)
     $species_identification_assay->annotate_from_isatab($assay_data);
 
     # add it to the project
     $species_identification_assay->add_to_projects($project);
 
     $species_identification_assay->add_to_protocols_from_isatab($assay_data->{protocols}, $ontologies, $study);
-
-    # now actually load the assay result!
-    # as a nd_experimentprop where type = MIRO species CV term
-    if (defined (my $organism_data = $assay_data->{characteristics}{'Organism'})) {
-
-      if (	# ($organism_data->{term_source_ref} eq 'NCBITaxon' ||
-	  $organism_data->{term_source_ref} eq 'MIRO' &&
-	  length($organism_data->{term_accession_number})) {
-
-	my $dbname = $organism_data->{term_source_ref};
-	my $acc = $organism_data->{term_accession_number};
-	my $cvterm = $cvterms->find( { 'dbxref.accession' => $acc,
-				       'db.name' => $dbname,
-				     },
-				     {
-				      join => { 'dbxref' => 'db' } });
-
-	croak "Can't find species id results MIRO CV term $dbname:$acc\n" unless ($cvterm);
-
-	$species_identification_assay->find_or_create_related('nd_experimentprops',
-							      { type => $cvterm,
-								value => '',
-							      });
-      }
-    }
   }
   return $species_identification_assay;
 

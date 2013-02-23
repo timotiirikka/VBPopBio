@@ -95,8 +95,8 @@ Retrieve props and process them into multiprops
 hash args: row => DBIx::Class Row or Result object
            prop_relation_name => DBIx props table relation name, e.g. 'stockprops'
 
-           # the following OPTIONAL arg is for internal use (see multiprop methods in Result classes)
-           filter => Cvterm object - returns the first multiprop with this term first in chain.
+           # the following OPTIONAL arg is for internal use (see multiprops method in some Result classes)
+           filter => Cvterm object - returns the multiprops with this exact term first in chain.
 
 Returns a perl list of multiprops
 
@@ -141,18 +141,14 @@ sub get_multiprops {
     my $value = pop(@{$prop_group})->value;
     confess "value should not be magic value '$MAGIC_VALUE'"
       if (defined $value && $value eq $MAGIC_VALUE);
-    my $multiprop =  Multiprop->new(cvterms => \@cvterms,
-				     value => $value,
-				     rank => $rank,);
-
-    if ($filter && $filter->cvterm_id == $cvterms[0]->cvterm_id) {
-      return $multiprop;
-    } else {
-      push @multiprops, $multiprop;
+    if (!defined $filter || $filter->cvterm_id == $cvterms[0]->cvterm_id) {
+      push @multiprops, Multiprop->new(cvterms => \@cvterms,
+				       value => $value,
+				       rank => $rank,);
     }
   }
   # if we're filtering (and didn't find the multiprop we wanted) then return nothing!
-  return $filter ? undef : @multiprops;
+  return @multiprops;
 }
 
 =head2 add_multiprops_from_isatab_characteristics

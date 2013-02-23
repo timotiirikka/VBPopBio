@@ -1,5 +1,6 @@
 package Bio::Chado::VBPopBio::Result::Stock;
 
+use strict;
 use base 'Bio::Chado::Schema::Result::Stock::Stock';
 __PACKAGE__->load_components('+Bio::Chado::VBPopBio::Util::Subclass');
 __PACKAGE__->resultset_class('Bio::Chado::VBPopBio::ResultSet::Stock'); # required because BCS has a custom resultset
@@ -341,13 +342,15 @@ get a arrayref of multiprops
 =cut
 
 sub multiprops {
-  my ($self) = @_;
+  my ($self, $filter) = @_;
 
   return Multiprops->get_multiprops
     ( row => $self,
       prop_relation_name => 'stockprops',
+      filter => $filter,
     );
 }
+
 
 
 =head2 as_data_structure
@@ -360,6 +363,8 @@ sub as_data_structure {
   my ($self, $depth) = @_;
   $depth = INT_MAX unless (defined $depth);
 
+  my $best_species = $self->best_species;
+
   return {
       id => $self->stable_id, # use stable_id when ready
       name => $self->name,
@@ -371,8 +376,8 @@ sub as_data_structure {
       # however, no depth checks for some contained objects, such as species, cvterms etc
       type => $self->type->as_data_structure,
 
-      species => 'to do',
-      species_evidence => 'to do',
+      species => defined $best_species ? $best_species->as_data_structure : undef,
+      # species_evidence => 'to do?',
 
       props => [ map { $_->as_data_structure } $self->multiprops ],
 
@@ -389,6 +394,56 @@ sub as_data_structure {
 }
 
 
+=head2 best_species
+
+interrogates species_identification assays and returns the most "detailed" species ontology term
+
+returns undefined if nothing suitable found
+
+At present, the most leafward unambiguous term is returned.
+
+e.g. if identified as Anopheles arabiensis AND Anopheles gambiae s.s. then Anopheles gambiae s.l. would be returned (with no further qualifying information at present).
+
+The algorithm does not care if terms are from different ontologies but
+probably should, as there may be no common ancestor terms.
+
+Curators should definitely
+restrict within-project species terms to the same ontology.
+
+=cut
+
+sub best_species {
+  my ($self) = @_;
+  my $schema = $self->result_source->schema;
+
+  my $sar = $schema->types->species_assay_result;
+
+  my $result;
+  my $internal_result; # are we returning a non-leaf node?
+  foreach my $assay ($self->species_identification_assays) {
+    foreach my $result_multiprop ($assay->multiprops($sar)) {
+      my $species_term = $result_multiprop->cvterms->[-1]; # second/last term in chain
+      if (!defined $result) {
+	$result = $species_term;
+      } elsif ($result->has_child($species_term)) {
+	# return the leaf-wards term unless we already chose an internal node
+	$result = $species_term unless ($internal_result);
+      } elsif ($species_term->has_child($result)) {
+	# that's fine - stick with the leaf term
+      } else {
+	# we need to return a common 'ancestral' internal node
+	foreach my $parent ($species_term->recursive_parents_same_ontology) {
+	  if ($parent->has_child($result)) {
+	    $result = $parent;
+	    $internal_result = 1;
+	    last;
+	  }
+	}
+      }
+    }
+  }
+  return $result;
+}
 
 =head1 AUTHOR
 

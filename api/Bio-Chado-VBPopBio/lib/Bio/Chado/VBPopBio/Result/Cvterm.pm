@@ -86,6 +86,34 @@ sub direct_children {
         )->search_related('subject');
 }
 
+=head2 recursive_parents_same_ontology
+
+see recursive_parents from Bio::Chado::Schema, but with an additional filter to
+restrict terms to the same "dbxref prefix" (e.g. MIRO) as the "self" term.
+
+=cut
+
+sub recursive_parents_same_ontology {
+  my ($self) = @_;
+  return $self->recursive_parents->search
+    ({ 'db.db_id' => $self->dbxref->db->id },
+     { join => { dbxref => 'db' },
+       prefetch => { dbxref => 'db' },
+     });
+}
+
+=head2 has_child
+
+returns true if argument is child of self
+
+=cut
+
+sub has_child {
+  my ($self, $child) = @_;
+  my $search = $self->search_related('cvtermpath_objects', { subject_id => $child->id,
+							     pathdistance => { '>' => 0 } });
+  return $search->count();
+}
 
 =head1 AUTHOR
 

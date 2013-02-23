@@ -213,7 +213,6 @@ use.  See DBIx::Class::DynamicSubclass.
 
 sub classify {
   my $self = shift;
-
   # this is what the new (>5.10) Perl switch statement looks like
   given ($self->type->name) {
     when ('field collection') {
@@ -225,7 +224,7 @@ sub classify {
     when ('genotype assay') {
       bless $self, 'Bio::Chado::VBPopBio::Result::Experiment::GenotypeAssay';
     }
-    when ('species identification assay') {
+    when ('species identification method') {
       bless $self, 'Bio::Chado::VBPopBio::Result::Experiment::SpeciesIdentificationAssay';
     }
     default {
@@ -695,15 +694,17 @@ sub add_multiprop {
 =head2 multiprops
 
 get a arrayref of multiprops
+optional filter cvterm (identity matching)
 
 =cut
 
 sub multiprops {
-  my ($self) = @_;
+  my ($self, $filter) = @_;
 
   return Multiprops->get_multiprops
     ( row => $self,
       prop_relation_name => 'nd_experimentprops',
+      filter => $filter,
     );
 }
 

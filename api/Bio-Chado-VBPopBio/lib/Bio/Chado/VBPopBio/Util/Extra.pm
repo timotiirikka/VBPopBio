@@ -36,6 +36,8 @@ such as $experiment->description()
 The attributes are added as rank==0 props on the relevant table.
 The prop.type is provided as an argument.
 
+Single valued attributes only!
+
 usage: developers only - see $experiment->description()
 
 hash args: row => DBIx::Class Row or Result object

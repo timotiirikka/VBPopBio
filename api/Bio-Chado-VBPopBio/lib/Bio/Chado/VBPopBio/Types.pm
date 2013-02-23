@@ -209,12 +209,23 @@ sub genotype_assay {
 
 sub species_identification_assay {
   my $self = shift;
-  return $self->schema->cvterms->create_with({ name => 'species identification assay',
-					       cv => 'TEMPcv',
-					       db => 'TEMPcv',
-					       dbxref => 'species_id_assay',
-					     });
+  return $self->schema->cvterms->find_by_name({ term_name => 'species identification method',
+						term_source_ref => 'MIRO',
+					      });
 }
+
+=head2 species_assay_result
+
+=cut
+
+sub species_assay_result {
+  my $self = shift;
+  warn "Temporarily using wrong term for species_assay_result\n";
+  return $self->schema->cvterms->find_by_name({ term_name => 'species list',
+						term_source_ref => 'VBcv',
+					      });
+}
+
 
 =head2 project_stock_link
 
