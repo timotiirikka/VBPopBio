@@ -22,7 +22,7 @@ use Getopt::Long;
 my $dsn = "dbi:Pg:dbname=$ENV{CHADO_DB_NAME}";
 my $schema = Bio::Chado::VBPopBio->connect($dsn, $ENV{USER}, undef, { AutoCommit => 1 });
 my $projects = $schema->projects;
-my $dry_run = 1;
+my $dry_run;
 my $json_file;
 my $json = JSON->new->pretty;
 my $samples_file;
@@ -36,6 +36,8 @@ my ($isatab_dir) = @ARGV;
 
 $schema->txn_do_deferred
   ( sub {
+
+      my $num_projects_before = $projects->count;
       my $project = $projects->create_from_isatab({ directory => $isatab_dir });
 
       if ($json_file) {
@@ -49,6 +51,10 @@ $schema->txn_do_deferred
 
       if ($samples_file) {
 	if (open(my $sfile, ">$samples_file")) {
+	  printf $sfile "#%s loaded into database %s (which contained %d projects) by %s on %s\n",
+	    $dry_run ? ' DRY-RUN' : '',
+	      $ENV{CHADO_DB_NAME}, $num_projects_before, $ENV{USER}, scalar(localtime);
+
 	  foreach my $stock ($project->stocks) {
 	    print $sfile join("\t",
 			    $stock->external_id,
