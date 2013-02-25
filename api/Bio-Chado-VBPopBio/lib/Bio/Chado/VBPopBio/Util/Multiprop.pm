@@ -36,7 +36,7 @@ optional string value
 =cut
 
 has 'value' => (
-		is => 'ro',
+		is => 'rw',
 		isa => 'Maybe[Str]',
 		required => 0,
 	       );

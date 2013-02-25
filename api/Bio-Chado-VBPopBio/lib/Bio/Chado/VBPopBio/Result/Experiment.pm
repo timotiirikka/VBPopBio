@@ -24,6 +24,7 @@ use aliased 'Bio::Chado::VBPopBio::Util::Multiprops';
 use aliased 'Bio::Chado::VBPopBio::Util::Multiprop';
 use aliased 'Bio::Chado::VBPopBio::Util::Extra';
 use aliased 'Bio::Chado::VBPopBio::Util::Date';
+use Tie::Hash::Indexed;
 
 =head1 NAME
 
@@ -408,6 +409,8 @@ sub add_to_protocols_from_isatab {
 
       if ($protocol_data->{parameter_values}) {
 
+	my $multiprops = ordered_hashref(); # ->{param_prefix or param_name} = multiprop
+
 	# if we had a nd_experiment_protocolprops table we could attach the props to $nd_experiment_protocol
 	# but we'll have to attach them to the nd_experiment ($self) for now
 
@@ -432,9 +435,7 @@ sub add_to_protocols_from_isatab {
 	    }
 	  } else {
 	    $schema->defer_exception("Protocol parameter '$param_name' has no ontology term");
-	    $param_type_cvterm = $cvterms->create_with({ name => $param_name,
-							 cv => 'VBcv',
-						       });
+	    $param_type_cvterm = $types->placeholder;
 	  }
 
 	  #
@@ -448,14 +449,6 @@ sub add_to_protocols_from_isatab {
 
 	  my @cvterm_sentence = ($param_type_cvterm);
 	  my $param_value;	# free text or number
-
-	  # prefix multiprop with "protocol parameter group 1" term
-	  # where we have repeated parameters, e.g.
-          # Parameter Value [insecticide1] Parameter Value [insecticide2]
-	  # Parameter Value [concentration1] Parameter Value [concentration2]
-	  if ($param_name =~ /(\d+)$/) {
-	    unshift @cvterm_sentence, $types->protocol_parameter_group($1);
-	  }
 
 	  # the param value is either a cvterm, or a text value with units or a text value
 	  if ($param_data->{term_source_ref} && length($param_data->{term_accession_number})) {
@@ -478,12 +471,28 @@ sub add_to_protocols_from_isatab {
 	  } elsif (length($param_data->{value})) {
 	    $param_value = $param_data->{value};
 	  }
-	  $self->add_multiprop(Multiprop->new(
-					      cvterms => \@cvterm_sentence,
-					      value => $param_value
-					     ));
+
+	  # build up multiprops based on the $param_name's prefix (anything before a dot)
+	  # but if there is no prefix, use the whole $param_name
+	  my ($param_prefix) = $param_name =~ /^(.+?)(?:\.|$)/;
+	  my $mprop = $multiprops->{$param_prefix} ||= Multiprop->new(cvterms => [ ]);
+	  if (defined $mprop->value) {
+	    # if we pulled out out of the $multiprops cache it should have an undefined value attribute
+	    $schema->defer_exception_once("Free text value not allowed for non-final prefixed protocol parameter '$param_name'");
+	  } else {
+	    # append to the cvterms
+	    push @{$mprop->cvterms}, @cvterm_sentence;
+	    # and add a free text value
+	    $mprop->value($param_value) if (defined $param_value);
+	  }
+	}
+	# add the multiprops to $self now
+	foreach my $mprop (values %{$multiprops}) {
+	  $self->add_multiprop($mprop);
 	}
       }
+
+
       push @protocols, $protocol;
     }
   }
@@ -769,6 +778,22 @@ sub basic_info {
 	 );
 }
 
+
+=head2 ordered_hashref
+
+Wrapper for Tie::Hash::Indexed - returns a hashref which has already been tied to Tie::Hash::Indexed
+
+no args.
+
+usage: $foo->{bar} = ordered_hashref();  $foo->{bar}{hello} = 123;
+
+=cut
+
+sub ordered_hashref {
+  my $ref = {};
+  tie %{$ref}, 'Tie::Hash::Indexed';
+  return $ref;
+}
 
 =head1 AUTHOR
 

@@ -53,7 +53,7 @@ STUDY
 "Study Protocol Description"		"Species were identified by morphological and genotypic characteristics"	"Inversion karyotypes were determined via Giemsa staining and visual inspection under light microscopy"	"Microsatellite lengths were determined by PCR"	"The dose response was assayed using the WHO paper kit"	"Sequencing with Illumina HiSeq, alignment with bowtie and SNP calling with SamTools"	"dual insecticide resistance assay"
 "Study Protocol URI"	http://whqlibdoc.who.int/offset/WHO_OFFSET_13_(part2).pdf
 "Study Protocol Version"
-"Study Protocol Parameters Name"			"cell type;staining duration"		"insecticidal substance"		insecticide1;concentration1;insecticide2;concentration2
+"Study Protocol Parameters Name"			"cell type;staining duration"		"insecticidal substance"		first.insecticide;first.concentration;second.insecticide;second.concentration
 "Study Protocol Parameters Name Term Accession Number"			0000324;0000433		10000239		10000239;0000033;10000239;0000033
 "Study Protocol Parameters Name Term Source REF"			EFO;EFO		MIRO		MIRO;PATO;MIRO;PATO
 "Study Protocol Components Name"			"microscope manufacturer;stain"			sequencer
