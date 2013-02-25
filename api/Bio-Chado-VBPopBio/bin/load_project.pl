@@ -55,10 +55,12 @@ $schema->txn_do_deferred
 	    $dry_run ? ' DRY-RUN' : '',
 	      $ENV{CHADO_DB_NAME}, $num_projects_before, $ENV{USER}, scalar(localtime);
 
+	  print $sfile "#Sample Name\tVB PopBio Stable ID\tVCF file(s)\tComments...\n";
 	  foreach my $stock ($project->stocks) {
 	    print $sfile join("\t",
 			    $stock->external_id,
 			    $stock->stable_id,
+			    join(",", grep defined, map { $_->vcf_file } $stock->genotype_assays),
 			    map { my $c = $_->value; # change "[topic] comment"
 				  $c =~ s/^\[//;     # to "topic<tab>comment"
 				  $c =~ s/\] /\t/;

@@ -77,56 +77,54 @@ sub create_from_isatab {
     # load the genotype data from the g_xxxxx ISA-Tab-like sheet(s)
     foreach my $g_file_name (keys %{$assay_data->{raw_data_files}}) {
       # but don't read in VCF files!
-      next if ($g_file_name =~ /\.vcf$/i);
-
-      my $genotype_data =
-	$genotype_data_cache{$g_file_name} ||=
-	  $isa_parser->parse_study_or_assay($g_file_name, undef,
-					    {
-					     'Type' => 'attribute',
-					     'Genotype Name' => 'reusable node',
-					    });
-
-#      warn "doing $assay_name from $g_file_name";
-#      use Data::Dumper;
-#      warn Dumper($genotype_data);
-#die;
-      if ($genotype_data->{assays}{$assay_name}{genotypes}) {
-	while (my ($name, $data) = each %{$genotype_data->{assays}{$assay_name}{genotypes}}) {
-	  #...
-	  # assay stable id + Genotype Name
-	  my $uniquename = "$stable_id:$name";
-	  my $description = $data->{description} || '';
-	  my $type = $cvterms->find_by_accession($data->{type});
-	  unless (defined $type) {
-	    $schema->defer_exception_once("Cannot load Type ontology term for genotype $name in $g_file_name");
-	    $type = $schema->types->placeholder;
-	  }
-
-	  my $genotype = $genotypes->find_or_create({
-						     name => $name,
-						     uniquename => $uniquename,
-						     description => $description,
-						     type => $type,
-						    });
-
-	  # link to the nd_experiment
-	  my $assay_link = $genotype->find_or_create_related('nd_experiment_genotypes',
-							     { nd_experiment => $genotype_assay });
-
-
-	  #
-	  # Deal with multiple "Characteristics [term name (ONTO:accession)]" columns
-	  # by adding multiprops for them
-	  #
-	  Multiprops->add_multiprops_from_isatab_characteristics
-	    ( row => $genotype,
-	      prop_relation_name => 'genotypeprops',
-	      characteristics => $data->{characteristics} ) if ($data->{characteristics});
-
-	}
+      if ($g_file_name =~ /\.vcf$/i) {
+	$genotype_assay->vcf_file($g_file_name);
       } else {
-	$schema->defer_exception_once("possibly missing genotype data for $assay_name in $g_file_name");
+	my $genotype_data =
+	  $genotype_data_cache{$g_file_name} ||=
+	    $isa_parser->parse_study_or_assay($g_file_name, undef,
+					      {
+					       'Type' => 'attribute',
+					       'Genotype Name' => 'reusable node',
+					      });
+
+	if ($genotype_data->{assays}{$assay_name}{genotypes}) {
+	  while (my ($name, $data) = each %{$genotype_data->{assays}{$assay_name}{genotypes}}) {
+	    #...
+	    # assay stable id + Genotype Name
+	    my $uniquename = "$stable_id:$name";
+	    my $description = $data->{description} || '';
+	    my $type = $cvterms->find_by_accession($data->{type});
+	    unless (defined $type) {
+	      $schema->defer_exception_once("Cannot load Type ontology term for genotype $name in $g_file_name");
+	      $type = $schema->types->placeholder;
+	    }
+	    my $genotype = $genotypes->find_or_create({
+						       name => $name,
+						       uniquename => $uniquename,
+						       description => $description,
+						       type => $type,
+						      });
+
+	    # link to the nd_experiment
+	    my $assay_link = $genotype->find_or_create_related('nd_experiment_genotypes',
+							       {
+								nd_experiment => $genotype_assay });
+
+
+	    #
+	    # Deal with multiple "Characteristics [term name (ONTO:accession)]" columns
+	    # by adding multiprops for them
+	    #
+	    Multiprops->add_multiprops_from_isatab_characteristics
+	      ( row => $genotype,
+		prop_relation_name => 'genotypeprops',
+		characteristics => $data->{characteristics} ) if ($data->{characteristics});
+
+	  }
+	} else {
+	  $schema->defer_exception_once("possibly missing genotype data for $assay_name in $g_file_name");
+	}
       }
     }
   }

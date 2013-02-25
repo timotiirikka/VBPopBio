@@ -343,6 +343,21 @@ sub protocol_component {
 					     });
 }
 
+=head2 vcf_file
+
+VBcv:protocol component
+
+=cut
+
+sub vcf_file {
+  my $self = shift;
+  return $self->schema->cvterms->create_with({ name => 'VCF file',
+					       cv => 'VBcv',
+					       db => 'VBcv',
+					       description => 'A cvterm used internally within Chado to store VCF file names for genotype assays.',
+					     });
+}
+
 =head2 protocol_parameter_group
 
 TAKES AN ARGUMENT!
@@ -352,6 +367,7 @@ integer 1 .. 3
 
 sub protocol_parameter_group {
   my ($self, $int) = @_;
+warn "protocol_parameter_group is deprecated!\n";
   my $schema = $self->schema;
   unless ($int =~ /^[123]$/) {
     $schema->defer_exception_once("Protocol parameter group number '$int' not valid");
