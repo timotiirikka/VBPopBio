@@ -51,8 +51,10 @@ $schema->txn_do_deferred
 
       if ($samples_file) {
 	if (open(my $sfile, ">$samples_file")) {
-	  printf $sfile "#%s loaded into database %s (which contained %d projects) by %s on %s\n",
+	  printf $sfile "#%s Project %s (%s) loaded into database %s (which contained %d projects) by %s on %s\n",
 	    $dry_run ? ' DRY-RUN' : '',
+	    $project->external_id,
+            $project->stable_id,
 	      $ENV{CHADO_DB_NAME}, $num_projects_before, $ENV{USER}, scalar(localtime);
 
 	  print $sfile "#Sample Name\tVB PopBio Stable ID\tVCF file(s)\tComments...\n";
