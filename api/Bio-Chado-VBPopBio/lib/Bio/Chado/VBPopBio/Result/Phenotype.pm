@@ -20,6 +20,24 @@ Bio::Chado::VBPopBio::Result::Phenotype
 
 Phenotype object with extra convenience functions
 
+=head1 MANY-TO-MANY RELATIONSHIPSa
+
+=head2 experiments
+
+Type: many_to_many
+
+Returns a list of experiments
+
+Related object: Bio::Chado::VBPopBio::Result::Experiment
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'experiments',
+     'nd_experiment_phenotypes' => 'nd_experiment',
+    );
+
 =head1 SUBROUTINES/METHODS
 
 =head2 add_multiprop

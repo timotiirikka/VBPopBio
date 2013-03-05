@@ -16,6 +16,42 @@ Bio::Chado::VBPopBio::Result::Contact
 
 Contact object with extra convenience functions
 
+=head1 MANY-TO-MANY RELATIONSHIPS
+
+=head2 experiments
+
+Type: many_to_many
+
+Returns a resultset of nd_experiments
+
+Related object: Bio::Chado::VBPopBio::Result::Experiment
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'experiments',
+     'nd_experiment_contacts' => 'nd_experiment',
+    );
+
+=head2 projects
+
+Type: many_to_many
+
+Returns a list of projects
+
+Related object: Bio::Chado::VBPopBio::Result::Project
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'projects',
+     'project_contacts' => 'project',
+    );
+
+
+
 =head1 SUBROUTINES/METHODS
 
 =head2 as_data_structure

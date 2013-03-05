@@ -59,6 +59,26 @@ sub as_data_structure {
 }
 
 
+=head2 delete
+
+deletes the experiment in a cascade which deletes all would-be orphan related objects
+
+=cut
+
+sub delete {
+  my $self = shift;
+
+  my $linkers = $self->related_resultset('nd_experiment_genotypes');
+  while (my $linker = $linkers->next) {
+    if ($linker->genotype->experiments->count == 1) {
+      $linker->genotype->delete;
+    }
+    $linker->delete;
+  }
+
+  return $self->SUPER::delete();
+}
+
 
 =head1 AUTHOR
 

@@ -518,11 +518,30 @@ sub delete {
     }
     $linker->delete;
   }
+
+  # protocols
+  $linkers = $self->related_resultset('nd_experiment_protocols');
+  while (my $linker = $linkers->next) {
+    if ($linker->nd_protocol->nd_experiments->count == 1) {
+      $linker->nd_protocol->delete;
+    }
+    $linker->delete;
+  }
+
+  # geolocations
   my $geoloc = $self->nd_geolocation;
   if ($geoloc->nd_experiments->count == 1) {
     $geoloc->delete;
   }
 
+  # contacts
+  $linkers = $self->related_resultset('nd_experiment_contacts');
+  while (my $linker = $linkers->next) {
+    if ($linker->contact->experiments->count == 1) {
+      $linker->contact->delete;
+    }
+    $linker->delete;
+  }
   return $self->SUPER::delete();
 }
 

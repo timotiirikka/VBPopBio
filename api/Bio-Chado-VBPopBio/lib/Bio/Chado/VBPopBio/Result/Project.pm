@@ -349,6 +349,24 @@ sub delete {
     }
     $linker->delete;
   }
+  # now do contacts (experiment-contacts will have been done already)
+  $linkers = $self->related_resultset('project_contacts');
+  while (my $linker = $linkers->next) {
+    # check that the contact is only attached to one project (has to be this one)
+    if ($linker->contact->projects->count == 1) {
+      $linker->contact->delete;
+    }
+    $linker->delete;
+  }
+  $linkers = $self->related_resultset('project_pubs');
+  while (my $linker = $linkers->next) {
+    # check that the pub is only attached to one project (has to be this one)
+    if ($linker->pub->projects->count == 1) {
+      $linker->pub->delete;
+    }
+    $linker->delete;
+  }
+
 
   return $self->SUPER::delete();
 }

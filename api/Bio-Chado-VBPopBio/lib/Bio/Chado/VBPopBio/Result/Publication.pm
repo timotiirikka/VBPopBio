@@ -20,6 +20,24 @@ We will store DOI in Chado's "uniquename" and Pubmed ID in "miniref".
 Author names will be stored as provided in pubauthor.surname.
 We won't currently attempt to parse surnames, initials, etc.
 
+=head1 MANY-TO-MANY RELATIONSHIPS
+
+=head2 projects
+
+Type: many_to_many
+
+Returns a list of projects
+
+Related object: Bio::Chado::Schema::Result::Project::Project
+
+=cut
+
+__PACKAGE__->many_to_many
+    (
+     'projects',
+     'project_pubs' => 'project',
+    );
+
 =head1 SUBROUTINES/METHODS
 
 =head2 as_data_structure
