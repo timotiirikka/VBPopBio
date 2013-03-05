@@ -11,9 +11,7 @@ use Test::More tests => 11;
 use Bio::Chado::VBPopBio;
 my $dsn = "dbi:Pg:dbname=$ENV{CHADO_DB_NAME}";
 my $schema = Bio::Chado::VBPopBio->connect($dsn, $ENV{USER}, undef, { AutoCommit => 1 });
-
 my $projects = $schema->projects;
-my $organisms = $schema->organisms;
 my $stocks = $schema->stocks;
 my $experiments = $schema->experiments;
 
@@ -22,7 +20,6 @@ my $result =
 		    my $proj_extID_type = $schema->types->project_external_ID;
 		    my $expt_extID_type = $schema->types->experiment_external_ID;
 
-		    my $organism = $organisms->first;
 		    my $stock_type = $schema->types->placeholder;
 
 		    my $project = $projects->create
@@ -43,8 +40,7 @@ my $result =
 		    # which we would normally do when loading an experiment
 		    #
 
-		    my $stock1 = $stocks->create({ organism => $organism,
-						   name => 'Test stock 1',
+		    my $stock1 = $stocks->create({ name => 'Test stock 1',
 						   uniquename => 'Test0001',
 						   description => 'Should never get committed',
 						   type => $stock_type

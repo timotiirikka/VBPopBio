@@ -1,2 +1,0 @@
-Sample Name	Assay Name	Protocol REF	Comment [note]	Raw Data File
-Sample01	Sample01.ga1	PCR genotyping		p_genotypes.tab

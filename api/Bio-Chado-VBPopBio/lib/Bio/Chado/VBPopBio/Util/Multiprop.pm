@@ -1,6 +1,7 @@
 package Bio::Chado::VBPopBio::Util::Multiprop;
 
 use Moose;
+use JSON;
 
 =head1 NAME
 
@@ -35,7 +36,7 @@ optional string value
 =cut
 
 has 'value' => (
-		is => 'ro',
+		is => 'rw',
 		isa => 'Maybe[Str]',
 		required => 0,
 	       );
@@ -54,7 +55,6 @@ has 'rank' => (
 		isa => 'Int',
 		required => 0,
 	       );
-
 
 
 =head2 as_data_structure
@@ -80,6 +80,21 @@ Simple string version of multiprop.  Comma separated cvterm names and optional f
 sub as_string {
   my $self = shift;
   return join ", ", (map { $_->name } $self->cvterms), defined $self->value ? ($self->value) : ();
+}
+
+=head2 as_json
+
+returns a JSON version of as_data_structure
+
+in general we DO NOT want to provide JSON methods for Result classes -
+this is a special case where the JSON is used for checking uniqueness
+(see Multiprops.pm)
+
+=cut
+
+sub as_json {
+  my $self = shift;
+  return encode_json($self->as_data_structure);
 }
 
 1;

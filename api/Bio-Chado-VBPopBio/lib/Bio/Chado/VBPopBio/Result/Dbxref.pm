@@ -24,6 +24,17 @@ We have to wrap this so that $dbxref->cvterm brings back "one of ours".
 
 =head1 SUBROUTINES/METHODS
 
+=head2 as_string
+
+returns db.name:accession, e.g. MIRO:0012345
+
+=cut
+
+sub as_string {
+  my $self = shift;
+  return $self->db->name().':'.$self->accession(),
+}
+
 
 =head1 AUTHOR
 

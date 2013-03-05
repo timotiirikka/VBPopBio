@@ -10,6 +10,8 @@ __PACKAGE__->subclass({
 		       cvalue => 'Bio::Chado::VBPopBio::Result::Cvterm',
 		      });
 
+use aliased 'Bio::Chado::VBPopBio::Util::Multiprops';
+
 =head1 NAME
 
 Bio::Chado::VBPopBio::Result::Phenotype
@@ -18,17 +20,87 @@ Bio::Chado::VBPopBio::Result::Phenotype
 
 Phenotype object with extra convenience functions
 
-=head1 SUBROUTINES/METHODS
+=head1 MANY-TO-MANY RELATIONSHIPSa
 
-=head2 display_cvterm
+=head2 experiments
 
-Likely to be deprecated method to produce a single text string for the term
+Type: many_to_many
+
+Returns a list of experiments
+
+Related object: Bio::Chado::VBPopBio::Result::Experiment
 
 =cut
 
-sub display_cvterm {
-  my ($cvterm) = @_;
-  return $cvterm ? $cvterm->cv->name.':'.$cvterm->name : undef;
+__PACKAGE__->many_to_many
+    (
+     'experiments',
+     'nd_experiment_phenotypes' => 'nd_experiment',
+    );
+
+=head1 SUBROUTINES/METHODS
+
+=head2 add_multiprop
+
+Adds normal props to the object but in a way that they can be
+retrieved in related semantic chunks or chains.  E.g.  'insecticide'
+=> 'permethrin' => 'concentration' => 'mg/ml' => 150 where everything
+in single quotes is an ontology term.  A multiprop is a chain of
+cvterms optionally ending in a free text value.
+
+This is more flexible than adding a cvalue column to all prop tables.
+
+Usage: $experiment>add_multiprop($multiprop);
+
+See also: Util::Multiprop (object) and Util::Multiprops (utility methods)
+
+=cut
+
+sub add_multiprop {
+  my ($self, $multiprop) = @_;
+
+  return Multiprops->add_multiprop
+    ( multiprop => $multiprop,
+      row => $self,
+      prop_relation_name => 'phenotypeprops',
+    );
+}
+
+=head2 multiprops
+
+get a arrayref of multiprops
+
+=cut
+
+sub multiprops {
+  my ($self) = @_;
+
+  return Multiprops->get_multiprops
+    ( row => $self,
+      prop_relation_name => 'phenotypeprops',
+    );
+}
+
+=head2 as_data_structure
+
+returns a json-like hashref of arrayrefs and hashrefs
+
+=cut
+
+sub as_data_structure {
+  my ($self, $seen) = @_;
+  return {
+	  name => $self->name,
+	  uniquename => $self->uniquename,
+	  observable => $self->observable->as_data_structure,
+	  defined $self->attr ? (attribute => $self->attr->as_data_structure) : (),
+	  value => {
+		    defined $self->value ? (text => $self->value) : (),
+		    defined $self->cvalue ? (cvterm => $self->cvalue->as_data_structure) : (),
+		    defined $self->assay ? (unit => $self->assay->as_data_structure) : (),
+		   },
+	  props => [ map { $_->as_data_structure } $self->multiprops ],
+	 };
 }
 
 =head1 AUTHOR

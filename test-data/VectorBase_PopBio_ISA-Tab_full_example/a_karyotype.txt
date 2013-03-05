@@ -1,2 +1,3 @@
-Sample Name	Assay Name	Protocol REF	Parameter Value [cell type]	Term Source REF	Term Accession Number	Parameter Value [time of day]	Raw Data File
-Sample01	Sample01.ka1	visual karyotyping	adult salivary gland	TGMA	0001804	morning	p_karyotypes.tab
+"Sample Name"	"Assay Name"	Description	"Protocol REF"	Performer	Date	"Parameter Value [cell type]"	"Term Source REF"	"Term Accession Number"	"Parameter Value [staining duration]"	Unit	"Term Source REF"	"Term Accession Number"	"Raw Data File"
+Sample01	Sample01.ka1		PROTO3		2013-01-02	"adult salivary gland"	TGMA	0001804	20	minute	UO	0000031	g_karyotypes.txt
+Sample02	Sample02.ka1		PROTO3		2013-01-02	"adult salivary gland"	TGMA	0001804	30	minute	UO	0000031	g_karyotypes.txt

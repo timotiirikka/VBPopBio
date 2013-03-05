@@ -10,6 +10,10 @@ __PACKAGE__->subclass({ nd_experiment_protocols => 'Bio::Chado::VBPopBio::Result
 			type => 'Bio::Chado::VBPopBio::Result::Cvterm',
 		      });
 
+use aliased 'Bio::Chado::VBPopBio::Util::Multiprops';
+use aliased 'Bio::Chado::VBPopBio::Util::Multiprop';
+use aliased 'Bio::Chado::VBPopBio::Util::Extra';
+
 =head1 NAME
 
 Bio::Chado::VBPopBio::Result::Protocol
@@ -95,6 +99,88 @@ sub create_nd_protocolprops {
 
 
 =head1 SUBROUTINES/METHODS
+
+
+=head2 add_multiprop
+
+Adds normal props to the object but in a way that they can be
+retrieved in related semantic chunks or chains.  E.g.  'insecticide'
+=> 'permethrin' => 'concentration' => 'mg/ml' => 150 where everything
+in single quotes is an ontology term.  A multiprop is a chain of
+cvterms optionally ending in a free text value.
+
+This is more flexible than adding a cvalue column to all prop tables.
+
+Usage: $protocol>add_multiprop($multiprop);
+
+See also: Util::Multiprop (object) and Util::Multiprops (utility methods)
+
+=cut
+
+sub add_multiprop {
+  my ($self, $multiprop) = @_;
+
+  return Multiprops->add_multiprop
+    ( multiprop => $multiprop,
+      row => $self,
+      prop_relation_name => 'nd_protocolprops',
+    );
+}
+
+=head2 multiprops
+
+get a arrayref of multiprops
+
+=cut
+
+sub multiprops {
+  my ($self) = @_;
+  return Multiprops->get_multiprops
+    ( row => $self,
+      prop_relation_name => 'nd_protocolprops',
+    );
+}
+
+=head description
+
+get/setter for description (stored via rank==0 prop)
+
+usage
+
+  $protocol->description("this is some text");
+  print $protocol->description;
+
+
+returns the text in both cases
+
+=cut
+
+sub description {
+  my ($self, $description) = @_;
+  return Extra->attribute
+    ( value => $description,
+      prop_type => $self->result_source->schema->types->description,
+      prop_relation_name => 'nd_protocolprops',
+      row => $self,
+    );
+}
+
+=head2 as_data_structure
+
+return a hashref of hashrefs and arrays for JSON serialisation
+
+=cut
+
+sub as_data_structure {
+  my ($self) = @_;
+
+  return { name => $self->name,
+	   description => $self->description,
+	   type => $self->type->as_data_structure,
+	   props => [ map { $_->as_data_structure } $self->multiprops ],
+	 };
+}
+
 
 =head1 AUTHOR
 

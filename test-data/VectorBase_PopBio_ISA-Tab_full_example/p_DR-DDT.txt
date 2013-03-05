@@ -1,0 +1,3 @@
+"Assay Name"	"Phenotype Name"	Observable	"Term Source REF"	"Term Accession Number"	Attribute	"Term Source REF"	"Term Accession Number"	Value	"Term Source REF"	"Term Accession Number"	Unit	"Term Source REF"	"Term Accession Number"
+Sample01.dr.DDT	"LC50: 1% DDT"	"resistance to single insecticide"	MIRO	00000021	LC50	VBcv	0000725	1			"mass percentage"	UO	0000163
+Sample02.dr.DDT	"LC50: unknown% DDT"	"resistance to single insecticide"	MIRO	00000021	LC50	VBcv	0000725	unknown	OBI	0000852	"mass percentage"	UO	0000163

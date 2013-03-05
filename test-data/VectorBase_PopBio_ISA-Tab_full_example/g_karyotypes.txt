@@ -1,0 +1,5 @@
+"Assay Name"	"Genotype Name"	Description	Type	"Term Source REF"	"Term Accession Number"	"Characteristics [inversion (SO:1000036)]"	"Term Source REF"	"Term Accession Number"	"Characteristics [chromosome_arm (SO:0000105)]"	"Term Source REF"	"Term Accession Number"
+Sample01.ka1	2La/a	"inversion: 2La/a"	paracentric_inversion	SO	1000047	2La/a			2L
+Sample01.ka1	2Rbc/+	"inversion: 2Rbc/+"	paracentric_inversion	SO	1000047	2Rbc/+			2R
+Sample02.ka1	2La/a	"inversion: 2La/a"	paracentric_inversion	SO	1000047	2La/a			2L
+Sample02.ka1	2Rjbcu/jcu	"inversion: 2Rjbcu/jcu"	paracentric_inversion	SO	1000047	2Rjbcu/jcu			2R

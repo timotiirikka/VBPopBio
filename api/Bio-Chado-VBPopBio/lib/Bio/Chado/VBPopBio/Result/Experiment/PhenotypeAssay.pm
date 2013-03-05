@@ -15,16 +15,11 @@ Phenotype assay
 
 =head1 SUBROUTINES/METHODS
 
-=head2 special
+=head2 as_data_structure
 
-Do something special for phenotype assay
+return data for jsonification
 
 =cut
-
-sub special {
-  my ($self) = @_;
-  return 'I am very special';
-}
 
 sub as_data_structure {
   my ($self, $depth) = @_;
@@ -33,10 +28,28 @@ sub as_data_structure {
   return {
 	  $self->basic_info,
           # let's only show locations for field_collections at the moment
-	  # geolocation => $self->nd_geolocation->as_data_structure,
-
-          phenotypes => "sick?",
+          phenotypes => [ map { $_->as_data_structure } $self->phenotypes ],
 	 };
+}
+
+=head2 delete
+
+deletes the experiment in a cascade which deletes all would-be orphan related objects
+
+=cut
+
+sub delete {
+  my $self = shift;
+
+  my $linkers = $self->related_resultset('nd_experiment_phenotypes');
+  while (my $linker = $linkers->next) {
+    if ($linker->phenotype->experiments->count == 1) {
+      $linker->phenotype->delete;
+    }
+    $linker->delete;
+  }
+
+  return $self->SUPER::delete();
 }
 
 =head1 AUTHOR

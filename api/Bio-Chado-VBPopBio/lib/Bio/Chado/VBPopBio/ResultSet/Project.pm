@@ -1,9 +1,12 @@
 package Bio::Chado::VBPopBio::ResultSet::Project;
 
 use strict;
+use warnings;
 use base 'DBIx::Class::ResultSet';
 use Carp;
-use Bio::Parser::ISATab;
+use Bio::Parser::ISATab 0.05;
+use aliased 'Bio::Chado::VBPopBio::Util::Multiprop';
+use aliased 'Bio::Chado::VBPopBio::Util::Multiprops';
 
 =head1 NAME
 
@@ -60,8 +63,11 @@ sub create_from_isatab {
 
   my $schema = $self->result_source->schema;
   my $cvterms = $schema->cvterms;
+  my $types = $schema->types;
 
   my $study = shift @studies;
+  Bio::Parser::ISATab::create_lookup($study, 'study_contacts', 'study_contact_lookup', 'study_person_email');
+
   # do some sanity checks
   my $study_title = $study->{study_title};
   croak "Study has no title" unless ($study_title);
@@ -69,8 +75,6 @@ sub create_from_isatab {
   croak "Study has no description" unless ($study_description);
   my $study_external_id = $study->{study_identifier};
   croak "Study has no external ID" unless ($study_external_id);
-
-  my $proj_extID_type = $schema->types->project_external_ID;
 
   #
   # check for project with project external ID already
@@ -89,16 +93,58 @@ sub create_from_isatab {
 			       } );
   $project->external_id($study_external_id);
 
-  warn "TO DO: project study factors\n";
-
-
+  #
   # getting the stable ID creates one
   # should there be an alias/wrapper for stable_id such as reserve_stable_id
   my $stable_id = $project->stable_id;
   croak "cannot create/retrieve a stable ID" unless ($stable_id);
 
+  #
+  # set some date attributes (via props)
+  #
+  if ($study->{study_submission_date}) {
+    $project->submission_date($study->{study_submission_date});
+  }
+  if ($study->{study_public_release_date}) {
+    $project->public_release_date($study->{study_public_release_date});
+  }
+
+  #
+  # add study design multiprops
+  #
+  my $sd = $types->study_design;
+  foreach my $study_design (@{$study->{study_designs}}) {
+    my $design_term = $cvterms->find_by_accession
+      ({ term_source_ref => $study_design->{study_design_type_term_source_ref},
+	 term_accession_number => $study_design->{study_design_type_term_accession_number}
+       });
+    if (defined $design_term) {
+      $project->add_multiprop(Multiprop->new( cvterms=>[ $sd, $design_term ] ));
+    } else {
+      $schema->defer_exception("Could not find ontology term $study_design->{study_design_type} ($study_design->{study_design_type_term_source_ref}:$study_design->{study_design_type_term_accession_number})");
+    }
+  }
+
+  #
+  # add the study publications
+  #
+  my $publications = $schema->publications;
+  foreach my $study_publication (@{$study->{study_publications}}) {
+    my $publication = $publications->find_or_create_from_isatab($study_publication);
+    $project->add_to_publications($publication) if ($publication);
+  }
+
+  #
+  # add the study contacts
+  #
+  my $contacts = $schema->contacts;
   foreach my $study_contact (@{$study->{study_contacts}}) {
-    warn "TO DO: add project contact $study_contact->{study_person_last_name}\n";
+    my $contact = $contacts->find_or_create_from_isatab($study_contact);
+    $project->add_to_contacts($contact) if ($contact);
+  }
+
+  if ($study->{study_factors} && @{$study->{study_factors}}) {
+    warn "Not currently loading Study Factors (but they are in the ISA-Tab)\n";
   }
 
   # create stand-alone stocks
@@ -129,13 +175,8 @@ sub create_from_isatab {
   my %genotype_assays;
   my %phenotype_assays;
 
-  my $assay_creates_stock = $cvterms->create_with({ name => 'assay creates stock', # discuss this more
-						    cv => 'VBcv',
-						  });
-  my $assay_uses_stock = $cvterms->create_with({ name => 'assay uses stock', # discuss this more
-						    cv => 'VBcv',
-						  });
-
+  my $assay_creates_stock = $types->assay_creates_sample;
+  my $assay_uses_stock = $types->assay_uses_sample;
 
   # for each stock that we already added
   while (my ($sample_id, $stock) = each %stocks) {
@@ -159,7 +200,7 @@ sub create_from_isatab {
       }
 
       # SPECIES IDENTIFICATION ASSAY
-      if ($assay->{study_assay_measurement_type} eq 'species identification assay') {
+      elsif ($assay->{study_assay_measurement_type} eq 'species identification assay') {
 	if (defined(my $sample_data = $assay->{samples}{$sample_id})) {
 	  while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
 	    $species_identification_assays{$assay_name} ||= $schema->species_identification_assays->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study);
@@ -172,7 +213,7 @@ sub create_from_isatab {
 
 
       # GENOTYPE ASSAY
-      if ($assay->{study_assay_measurement_type} eq 'genotype assay') {
+      elsif ($assay->{study_assay_measurement_type} eq 'genotype assay') {
 	if (defined(my $sample_data = $assay->{samples}{$sample_id})) {
 	  while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
 	    $genotype_assays{$assay_name} ||= $schema->genotype_assays->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study, $parser);
@@ -182,13 +223,18 @@ sub create_from_isatab {
       }
 
       # PHENOTYPE ASSAY
-      if ($assay->{study_assay_measurement_type} eq 'phenotype assay') {
+      elsif ($assay->{study_assay_measurement_type} eq 'phenotype assay') {
 	if (defined(my $sample_data = $assay->{samples}{$sample_id})) {
 	  while (my ($assay_name, $assay_data) = each %{$sample_data->{assays}}) {
 	    $phenotype_assays{$assay_name} ||= $schema->phenotype_assays->create_from_isatab($assay_name, $assay_data, $project, $ontologies, $study, $parser);
 	    $phenotype_assays{$assay_name}->add_to_stocks($stock, { type => $assay_uses_stock });
 	  }
 	}
+      }
+
+      # WRONG ASSAY TYPE
+      else {
+	$schema->defer_exception_once("Unknown Study Assay Measurement Type: $assay->{study_assay_measurement_type}");
       }
     }
 

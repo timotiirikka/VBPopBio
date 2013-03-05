@@ -1,4 +1,4 @@
-use Test::More tests => 23;
+use Test::More tests => 21;
 use strict;
 use warnings;
 use lib '../api/Bio-Chado-VBPopBio/lib';
@@ -26,7 +26,6 @@ $data = eval { from_json $json };
 ok($data, "$url json decoding");
 is($data->{id}, $stock_id, "$url ID check");
 is($data->{name}, "SM-NRUE", "$url name check");
-is($data->{external_id}, "SM-NRUE", "$url external_id check");
 ok(defined $data->{organism}, "$url stock has organism");
 ok(!defined $data->{field_collections}, "$url should have no fc's");
 ok(!defined $data->{genotype_assays}, "$url should have no genotype assays");
@@ -45,7 +44,6 @@ $data = eval { from_json $json };
 ok($data, "$url json decoding");
 is($data->{id}, $stock_id, "$url ID check");
 is($data->{name}, "SM-NRUE", "$url name check");
-is($data->{external_id}, "SM-NRUE", "$url external_id check");
 ok(defined $data->{organism}, "$url stock has organism");
 # see if it has one field_collection
 is(ref($data->{field_collections}), "ARRAY", "$url field_collections array");

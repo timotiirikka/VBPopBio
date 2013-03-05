@@ -1,4 +1,4 @@
-use Test::More tests => 15;
+use Test::More tests => 18;
 
 use Bio::Chado::VBPopBio;
 my $dsn = "dbi:Pg:dbname=$ENV{CHADO_DB_NAME}";
@@ -11,7 +11,7 @@ isa_ok($projects, 'Bio::Chado::VBPopBio::ResultSet::Project', "resultset correct
 
 # check that we can create and delete a project
 my $result =
-  $schema->txn_do(sub {
+  $schema->txn_do_deferred(sub {
 		    my $proj_extID_type = $schema->types->project_external_ID;
 
 		    my $project = $projects->create
@@ -20,9 +20,13 @@ my $result =
 			description => 'should not exist',
 		       });
 		    $project->external_id('1970-Smith-test');
+		    $project->submission_date("2012-11");
+		    $project->public_release_date("2015-05");
 
 		    ok(defined $project, "project object defined");
 		    is($project->external_id, '1970-Smith-test', "external id");
+		    is($project->submission_date, '2012-11', "submission date");
+		    is($project->public_release_date, '2015-05', "public release date");
 		    ok($projects->looks_like_stable_id($project->stable_id), "stable ID looks ok");
 
 		    my $project2 = $projects->create
@@ -31,6 +35,7 @@ my $result =
 			description => 'should not exist',
 		       });
 		    $project2->external_id('1970-Smith-test2');
+		    $project2->submission_date('2010b'); # should throw an expected exception
 
 		    like($project2->stable_id, qr/^VBP\d+$/, "second stable ID looks ok");
 		    isnt($project->stable_id, $project2->stable_id, "two project stable IDs are different");
@@ -72,7 +77,9 @@ my $result =
 		    is($p3->id, $project3b->id, "same internal id");
 		    is($p3->external_id, $project3b->external_id, "same external id");
 
-		    $schema->txn_rollback();
+		    is(scalar(@{$schema->{deferred_exceptions}}), 1, "one expected deferred exceptions");
+		    # we were just pretending! roll back:
+		    $schema->defer_exception("This is the only exception we should see.");
 		  });
 
 
