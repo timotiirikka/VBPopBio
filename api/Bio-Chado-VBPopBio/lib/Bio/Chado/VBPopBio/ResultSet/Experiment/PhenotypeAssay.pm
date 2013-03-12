@@ -3,8 +3,9 @@ package Bio::Chado::VBPopBio::ResultSet::Experiment::PhenotypeAssay;
 use base 'Bio::Chado::VBPopBio::ResultSet::Experiment';
 use Carp;
 use strict;
+use aliased 'Bio::Chado::VBPopBio::Util::Multiprops';
 
-use Bio::Chado::VBPopBio::Util::Phenote qw/parse_phenote/;
+my %phenotype_data_cache; # see GenotypeAssay.pm
 
 =head1 NAME
 
@@ -45,101 +46,99 @@ sub new {
 
 =cut
 
-my %phenote_data_cache; # see GenotypeAssay.pm
-
 sub create_from_isatab {
   my ($self, $assay_name, $assay_data, $project, $ontologies, $study, $isa_parser) = @_;
-  my $schema = $self->result_source->schema;
 
-  if ($self->looks_like_stable_id($assay_name)) {
-    my $existing_experiment = $self->find_by_stable_id($assay_name);
-    if (defined $existing_experiment) {
-      $existing_experiment->add_to_projects($project);
-      return $existing_experiment;
-    }
-    $schema->defer_exception("$assay_name looks like a stable ID but we couldn't find it in the database");
-  }
+  my $phenotype_assay = $self->find_and_link_existing($assay_name, $project);
 
-  # create the nd_experiment and stock linker type
-  my $cvterms = $schema->cvterms;
-  my $dbxrefs = $schema->dbxrefs;
-  my $phenotypes = $schema->phenotypes;
+  unless (defined $phenotype_assay) {
 
-  # always create a new nd_experiment object
-  my $phenotype_assay = $self->create();
-  $phenotype_assay->external_id($assay_name);
-  my $stable_id = $phenotype_assay->stable_id($project);
+    # create the nd_experiment and stock linker type
+    my $schema = $self->result_source->schema;
+    my $cvterms = $schema->cvterms;
+    my $dbxrefs = $schema->dbxrefs;
+    my $phenotypes = $schema->phenotypes;
 
-  # add it to the project
-  $phenotype_assay->add_to_projects($project);
+    # always create a new nd_experiment object
+    $phenotype_assay = $self->create();
+    $phenotype_assay->external_id($assay_name);
+    my $stable_id = $phenotype_assay->stable_id($project);
 
-  # add the protocols
-  $phenotype_assay->add_to_protocols_from_isatab($assay_data->{protocols}, $ontologies, $study);
+    # add description, characteristics etc
+    $phenotype_assay->annotate_from_isatab($assay_data);
 
-  # load the phenotype data from the phenote file(s)
-  foreach my $phenote_file_name (keys %{$assay_data->{raw_data_files}}) {
-    my $phenote =
-      $phenote_data_cache{$isa_parser->directory.'/'.$phenote_file_name} ||=
-	parse_phenote($phenote_file_name, $isa_parser, 'Assay');
+    # add it to the project
+    $phenotype_assay->add_to_projects($project);
 
-    my @prop_rows;
-    my @unique_info;
-    # now loop through the rows for this particular assay and add the phenotypes first
-    foreach my $row (@{$phenote->{$assay_name}}) {
-      # gather this for each phenotype and its preceding properties
-      push @unique_info, $row->{'Entity Name'}, $row->{'Attribute Name'}, $row->{'Quality Name'}, $row->{Value};
+    # add the protocols
+    $phenotype_assay->add_to_protocols_from_isatab($assay_data->{protocols}, $ontologies, $study);
 
-      croak "Units not handled by phenotype loader yet." if ($row->{'Unit Name'} || $row->{'Unit ID'});
+    # load the phenotype data from the phenotype file(s)
+    foreach my $p_file_name (keys %{$assay_data->{raw_data_files}}) {
+      my $phenotype_data =
+	$phenotype_data_cache{$p_file_name} ||=
+	  $isa_parser->parse_study_or_assay($p_file_name, undef,
+					    {
+					     'Phenotype Name' => 'reusable node',
+					     'Observable' => 'attribute',
+					     'Attribute' => 'attribute',
+					     'Value' => 'attribute',
+					    });
 
-      if ($row->{'prop?'}) {
-	push @prop_rows, $row; # deal with props later
+      if ($phenotype_data->{assays}{$assay_name}{phenotypes}) {
+	while (my ($name, $data) = each %{$phenotype_data->{assays}{$assay_name}{phenotypes}}) {
+	  my $uniquename = "$stable_id:$name";
+
+	  my $observable = $cvterms->find_by_accession($data->{observable});
+	  unless (defined $observable) {
+	    $schema->defer_exception_once("Cannot load Observable ontology term for phenotype $name in $p_file_name");
+	    $observable = $schema->types->placeholder;
+	  }
+
+	  my $attribute = $cvterms->find_by_accession($data->{attribute});
+	  unless (defined $attribute) {
+	    $schema->defer_exception_once("Cannot load Attribute ontology term for phenotype $name in $p_file_name");
+	    $attribute = $schema->types->placeholder;
+	  }
+
+	  my $value_term = $cvterms->find_by_accession($data->{value});
+
+	  my $unit;
+	  if (!defined $value_term && defined $data->{value}{unit}) {
+	    $unit = $cvterms->find_by_accession($data->{value}{unit});
+	  }
+
+	  my $phenotype = $phenotypes->find_or_create({
+						       name => $name,
+						       uniquename => $uniquename,
+						       defined $observable ? ( observable => $observable ) : (),
+						       defined $attribute ? ( attr => $attribute ) : (),
+						       defined $value_term ? ( cvalue => $value_term ) : ( value => $data->{value}{value} ),
+						       # hijacking the assay/evidence cvterm for units
+						       defined $unit ? ( assay => $unit ) : (),
+						      });
+
+	  # link to the nd_experiment
+	  my $assay_link = $phenotype->find_or_create_related('nd_experiment_phenotypes',
+							      {
+							       nd_experiment => $phenotype_assay });
+
+	  #
+	  # Deal with multiple "Characteristics [term name (ONTO:accession)]" columns
+	  # by adding multiprops for them
+	  #
+	  Multiprops->add_multiprops_from_isatab_characteristics
+	    ( row => $phenotype,
+	      prop_relation_name => 'phenotypeprops',
+	      characteristics => $data->{characteristics} ) if ($data->{characteristics});
+
+	}
       } else {
-	# create the phenotype
-	my ($entity, $attribute, $quality);
-
-	if ($row->{'Entity ID'} =~ /^(.+):(.+)$/) {
-	  my ($db, $acc) = ($1, $2);
-	  $entity = $dbxrefs->find({ accession => $acc, version => '', 'db.name' => $db },
-				   { join => 'db' })->cvterm or croak "can't find cvterm for entity $db:$acc";
-	}
-	if ($row->{'Attribute ID'} =~ /^(.+):(.+)$/) {
-	  my ($db, $acc) = ($1, $2);
-	  $attribute = $dbxrefs->find({ accession => $acc, version => '', 'db.name' => $db },
-				      { join => 'db' })->cvterm or croak "can't find cvterm for attribute $db:$acc";
-	}
-	if ($row->{'Quality ID'} =~ /^(.+):(.+)$/) {
-	  my ($db, $acc) = ($1, $2);
-	  $quality = $dbxrefs->find({ accession => $acc, version => '', 'db.name' => $db },
-				    { join => 'db' })->cvterm or croak "can't find cvterm for quality $db:$acc";
-	}
-	my $value = $row->{Value};
-
-	my $phenotype = $phenotypes->find_or_create({
-						     uniquename => join(':',@unique_info),
-						     defined $entity ? ( observable => $entity ) : (),
-						     defined $attribute ? ( attr => $attribute ) : (),
-						     defined $quality ? ( cvalue => $quality ) : ( value => $value ),
-						    });
-
-	@unique_info = ();
-
-	# link to the nd_experiment
-	my $assay_link = $phenotype->find_or_create_related('nd_experiment_phenotypes',
-							    { nd_experiment => $phenotype_assay });
-
-	# now add the phenotypeprops that we already encountered in the phenote file
-	# this time, only add a ontologised term (silently skip any with no db:acc provided)
-	while (my $prop_row = shift @prop_rows) {
-
-	  croak "Loader can't handle phenotype props yet.";
-	  # see GenotypeAssay.pm for how to implement this
-	}
+	$schema->defer_exception_once("possibly missing phenotype data for $assay_name in $p_file_name");
       }
     }
   }
-
   return $phenotype_assay;
-
 }
 
 =head2 _type

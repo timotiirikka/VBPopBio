@@ -38,6 +38,30 @@ sub create {
   return $self->SUPER::create($fields);
 }
 
+=head2 find_and_link_existing
+
+Finds the existing experiment object (if there) via $assay_name if it's a stable_id.
+Links it to the project and returns it.
+Otherwise returns undef.
+
+=cut
+
+sub find_and_link_existing {
+  my ($self, $assay_name, $project) = @_;
+
+  my $schema = $self->result_source->schema;
+
+  if ($self->looks_like_stable_id($assay_name)) {
+    my $existing_experiment = $self->find_by_stable_id($assay_name);
+    if (defined $existing_experiment) {
+      $existing_experiment->add_to_projects($project);
+      return $existing_experiment;
+    }
+    $schema->defer_exception("$assay_name looks like a stable ID but we couldn't find it in the database");
+  }
+  return undef;
+}
+
 =head2 _type
 
 Private method to return type cvterm for this subclass

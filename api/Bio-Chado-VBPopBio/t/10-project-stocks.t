@@ -1,21 +1,13 @@
-use Test::More tests => 19;
+use Test::More tests => 18;
 
 use Bio::Chado::VBPopBio;
 my $dsn = "dbi:Pg:dbname=$ENV{CHADO_DB_NAME}";
 my $schema = Bio::Chado::VBPopBio->connect($dsn, $ENV{USER}, undef, { AutoCommit => 1 });
-
-my $organisms = $schema->organisms();
 my $cvterms = $schema->cvterms();
-
-ok($organisms->count() > 1, "Some organisms are loaded");
-
-my $organism = $organisms->first;
-
 my $projects = $schema->projects();
 my $stocks = $schema->stocks();
 
 isa_ok($projects, 'Bio::Chado::VBPopBio::ResultSet::Project', "resultset correct class");
-
 
 # check that we can create and delete a project
 my $result =
@@ -37,8 +29,7 @@ my $result =
 							     cv => 'VBcv',
 							   });
 
-		    my $new_stock = $stocks->create({ organism => $organism,
-						      name => 'Test stock 123',
+		    my $new_stock = $stocks->create({ name => 'Test stock 123',
 						      uniquename => 'Test0123',
 						      description => 'Should never get committed',
 						      type => $stock_type
@@ -49,8 +40,7 @@ my $result =
 		    isa_ok($stocks1, "Bio::Chado::VBPopBio::ResultSet::Stock", "got stock(s)");
 		    is($stocks1->count, 1, "project has one stock");
 
-		    my $new_stock2 = $stocks->create({ organism => $organism,
-						       name => 'Test stock 1234',
+		    my $new_stock2 = $stocks->create({ name => 'Test stock 1234',
 						       uniquename => 'Test01234',
 						       description => 'Should never get committed',
 						       type => $stock_type

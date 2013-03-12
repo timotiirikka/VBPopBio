@@ -13,6 +13,7 @@ __PACKAGE__->subclass({ nd_experiment_stocks => 'Bio::Chado::VBPopBio::Result::L
 		        nd_experiment_genotypes => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentGenotype',
 		        nd_experiment_phenotypes => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentPhenotype',
 		        nd_experiment_dbxrefs => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentDbxref',
+		        nd_experiment_contacts => 'Bio::Chado::VBPopBio::Result::Linker::ExperimentContact',
 			type => 'Bio::Chado::VBPopBio::Result::Cvterm',
 		      });
 
@@ -21,6 +22,9 @@ __PACKAGE__->resultset_attributes({ order_by => 'nd_experiment_id' });
 
 use aliased 'Bio::Chado::VBPopBio::Util::Multiprops';
 use aliased 'Bio::Chado::VBPopBio::Util::Multiprop';
+use aliased 'Bio::Chado::VBPopBio::Util::Extra';
+use aliased 'Bio::Chado::VBPopBio::Util::Date';
+use Tie::Hash::Indexed;
 
 =head1 NAME
 
@@ -67,11 +71,11 @@ __PACKAGE__->many_to_many
      'nd_experiment_projects' => 'project',
     );
 
-=head2 nd_protocols
+=head2 nd_protocols and protocols
 
 Type: many_to_many
 
-Returns a list of nd_protocols
+Returns a list of protocols
 
 Related object: Bio::Chado::Schema::Result::NaturalDiversity::NdProtocol
 
@@ -79,9 +83,16 @@ Related object: Bio::Chado::Schema::Result::NaturalDiversity::NdProtocol
 
 __PACKAGE__->many_to_many
     (
+     'protocols',
+     'nd_experiment_protocols' => 'nd_protocol',
+    );
+
+__PACKAGE__->many_to_many
+    (
      'nd_protocols',
      'nd_experiment_protocols' => 'nd_protocol',
     );
+
 
 =head2 genotypes
 
@@ -203,7 +214,6 @@ use.  See DBIx::Class::DynamicSubclass.
 
 sub classify {
   my $self = shift;
-
   # this is what the new (>5.10) Perl switch statement looks like
   given ($self->type->name) {
     when ('field collection') {
@@ -215,7 +225,7 @@ sub classify {
     when ('genotype assay') {
       bless $self, 'Bio::Chado::VBPopBio::Result::Experiment::GenotypeAssay';
     }
-    when ('species identification assay') {
+    when ('species identification method') {
       bless $self, 'Bio::Chado::VBPopBio::Result::Experiment::SpeciesIdentificationAssay';
     }
     default {
@@ -224,6 +234,40 @@ sub classify {
   }
 }
 
+=head2 annotate_from_isatab
+
+  Usage: $assay->annotate_from_isatab($assay_data)
+
+  Return value: none
+
+  Args: hashref of ISA-Tab data: $study->{study_assays}[0]{samples}{SAMPLE_NAME}{assays}{ASSAY_NAME}
+
+Adds description, comments, characteristics to the assay/nd_experiment object
+
+=cut
+
+sub annotate_from_isatab {
+  my ($self, $assay_data) = @_;
+
+  if (defined $assay_data->{description}) {
+    $self->description($assay_data->{description});
+  }
+
+  Multiprops->add_multiprops_from_isatab_characteristics
+    (
+     row => $self,
+     prop_relation_name => 'nd_experimentprops',
+     characteristics => $assay_data->{characteristics},
+    ) if ($assay_data->{characteristics});
+
+  Multiprops->add_multiprops_from_isatab_comments
+    (
+     row => $self,
+     prop_relation_name => 'nd_experimentprops',
+     comments => $assay_data->{comments},
+    ) if ($assay_data->{comments});
+
+}
 
 
 =head2 add_to_protocols_from_isatab
@@ -232,7 +276,7 @@ sub classify {
 
   Return value: a Perl list of the protocols added.
 
-  Args:  hashref to $study->{study_assay_lookup}{'some type of assay'}{samples}{SAMPLE_NAME}{assays}{ASSAY_NAME}{protocols}
+  Args:  hashref to $study->{study_assays}[0]{samples}{SAMPLE_NAME}{assays}{ASSAY_NAME}{protocols}
 
 Adds zero or more protocols from ISA-Tab data.
 
@@ -248,11 +292,14 @@ sub add_to_protocols_from_isatab {
 
   if ($protocols_data) {
     my $schema = $self->result_source->schema;
+    my $types = $schema->types;
     my $protocols = $schema->protocols;
     my $cvterms = $schema->cvterms;
     my $dbxrefs = $schema->dbxrefs;
+    my $contacts = $schema->contacts;
 
     while (my ($protocol_ref, $protocol_data) = each %{$protocols_data}) {
+
       my $protocol_info = $study->{study_protocol_lookup}{$protocol_ref};
 
       unless ($study->{study_protocol_lookup}{$protocol_ref}) {
@@ -280,28 +327,89 @@ sub add_to_protocols_from_isatab {
 	# maybe create a placeholder here and store the error
 	# $protocol_info->{study_protocol_type}
 	$schema->defer_exception("Study Protocol Type ontology term for protocol $protocol_ref missing or not found\n");
-	$protocol_type = $schema->types->placeholder;
+	$protocol_type = $types->placeholder;
       }
 
-      my $protocol = $protocols->find_or_create({
-						 name => $study->{study_identifier}.":".$protocol_ref,
-						 type => $protocol_type,
-						});
+      my $protocol = $protocols->find_or_new({
+					      name => $self->stable_id.":".$protocol_ref, # $study->{study_identifier}.":".$protocol_ref,
+					      type => $protocol_type,
+					     });
 
 
-# TO DO - add multiprops here
-warn "need multiprops for nd_protocol";
-      if ($protocol_info->{study_protocol_description}) {
-	$protocol->create_nd_protocolprops( { description => $protocol_info->{study_protocol_description} },
-					    { cv_name => 'VBcv',
-					      autocreate => 1,
-					    });
+      # only add more info to $protocol if it's newly created
+      unless ($protocol->in_storage) {
+	$protocol->insert; #now it's in the DB
+	# set the description
+	if (defined $protocol_info->{study_protocol_description}) {
+	  $protocol->description($protocol_info->{study_protocol_description});
+	}
+
+	if (defined $protocol_info->{study_protocol_component_lookup}) {
+	  while (my ($name, $data) = each %{$protocol_info->{study_protocol_component_lookup}}) {
+	    # just add the component type as a single term multiprop
+	    my $type;
+	    if ($data->{study_protocol_component_type_term_accession_number} &&
+		$data->{study_protocol_component_type_term_source_ref}) {
+	      $type = $cvterms->find_by_accession
+		({ term_source_ref => $data->{study_protocol_component_type_term_source_ref},
+		   term_accession_number => $data->{study_protocol_component_type_term_accession_number} });
+	      if (!defined $type) {
+		$schema->defer_exception_once("failed to find term for $data->{study_protocol_component_type} ($data->{study_protocol_component_type_term_source_ref}:$data->{study_protocol_component_type_term_accession_number})");
+	      }
+	    }
+	    my @cvterm_sentence = ($types->protocol_component);
+	    my $text_value;
+	    if (defined $type) {
+	      push @cvterm_sentence, $type;
+	    } else {
+	      $text_value = "$name: $data->{study_protocol_component_type}";
+	    }
+	    $protocol->add_multiprop(Multiprop->new(cvterms=>\@cvterm_sentence, value=>$text_value));
+	  }
+	}
       }
 
       # link this experiment to the protocol
       my $nd_experiment_protocol = $self->find_or_create_related('nd_experiment_protocols', {  nd_protocol => $protocol } );
 
+      # handle Date and Performer (store as experimentprops)
+      # figure out what to do if there are multiple protocols for one experiment
+      # as the date/performer info could be overwritten (but probably should not be)
+      if (my $performer_email = $protocol_data->{performer}) {
+	my $study_contact = $study->{study_contact_lookup}{$performer_email};
+	my $contact = $contacts->find_or_create_from_isatab($study_contact);
+	if ($contact) {
+	  $self->add_to_contacts($contact);
+	} else {
+	  $schema->defer_exception_once("Can't find assay (protocol $protocol_ref) performer by email '$performer_email' in Study Contacts section");
+	}
+      }
+      if (my $date = $protocol_data->{date}) {
+	my ($start_date, $end_date) = split qr{/}, $date;
+	if ($start_date && $end_date) {
+	  my $valid_start = Date->simple_validate_date($start_date, $self);
+	  my $valid_end = Date->simple_validate_date($end_date, $self);
+	  if ($valid_start && $valid_end) {
+	    $self->add_multiprop(Multiprop->new(cvterms=>[$types->start_date], value=>$valid_start));
+	    $self->add_multiprop(Multiprop->new(cvterms=>[$types->end_date], value=>$valid_end));
+	  } else {
+	    $schema->defer_exception_once("Cannot parse start/end date '$date' for assay (protocol $protocol_ref).");
+	  }
+	} elsif ($start_date) {
+	  my $valid_date = Date->simple_validate_date($start_date, $self);
+	  if ($valid_date) {
+	    $self->add_multiprop(Multiprop->new(cvterms=>[$types->date], value=>$valid_date));
+	  } else {
+	    $schema->defer_exception_once("Cannot parse date '$date' for assay (protocol $protocol_ref).");
+	  }
+	} else {
+	  $schema->defer_exception_once("Some problem with date string '$date' in assay (protocol $protocol_ref).")
+	}
+      }
+
       if ($protocol_data->{parameter_values}) {
+
+	my $multiprops = ordered_hashref(); # ->{param_prefix or param_name} = multiprop
 
 	# if we had a nd_experiment_protocolprops table we could attach the props to $nd_experiment_protocol
 	# but we'll have to attach them to the nd_experiment ($self) for now
@@ -323,13 +431,11 @@ warn "need multiprops for nd_protocol";
 	       });
 	    unless (defined $param_type_cvterm) {
 	      $schema->defer_exception("Cant find term '$param_type_db:$param_type_acc' for protocol parameter '$param_name'");
-	      $param_type_cvterm = $schema->types->placeholder;
+	      $param_type_cvterm = $types->placeholder;
 	    }
 	  } else {
 	    $schema->defer_exception("Protocol parameter '$param_name' has no ontology term");
-	    $param_type_cvterm = $cvterms->create_with({ name => $param_name,
-							 cv => 'VBcv',
-						       });
+	    $param_type_cvterm = $types->placeholder;
 	  }
 
 	  #
@@ -342,14 +448,14 @@ warn "need multiprops for nd_protocol";
 	  #
 
 	  my @cvterm_sentence = ($param_type_cvterm);
-	  my $param_value; # free text or number
+	  my $param_value;	# free text or number
 
 	  # the param value is either a cvterm, or a text value with units or a text value
 	  if ($param_data->{term_source_ref} && length($param_data->{term_accession_number})) {
 	    my $param_value_cvterm = $cvterms->find_by_accession($param_data);
 	    unless (defined $param_value_cvterm) {
 	      $schema->defer_exception("Can't find parameter value cvterm $param_data->{term_source_ref}:($param_data->{term_accession_number}");
-	      $param_value_cvterm = $schema->types->placeholder;
+	      $param_value_cvterm = $types->placeholder;
 	    }
 	    push @cvterm_sentence, $param_value_cvterm;
 	  } elsif (length($param_data->{value}) && $param_data->{unit}
@@ -358,19 +464,34 @@ warn "need multiprops for nd_protocol";
 	    my $param_unit_cvterm = $cvterms->find_by_accession($param_data->{unit});
 	    unless (defined $param_unit_cvterm) {
 	      $schema->defer_exception("Can't find parameter value's unit cvterm: $param_data->{unit}{term_source_ref}:$param_data->{unit}{term_accession_number}");
-	      $param_unit_cvterm = $schema->types->placeholder;
+	      $param_unit_cvterm = $types->placeholder;
 	    }
 	    push @cvterm_sentence, $param_unit_cvterm;
 	    $param_value = $param_data->{value};
 	  } elsif (length($param_data->{value})) {
 	    $param_value = $param_data->{value};
 	  }
-	  $self->add_multiprop(Multiprop->new(
-					      cvterms => \@cvterm_sentence,
-					      value => $param_value
-					     ));
+
+	  # build up multiprops based on the $param_name's prefix (anything before a dot)
+	  # but if there is no prefix, use the whole $param_name
+	  my ($param_prefix) = $param_name =~ /^(.+?)(?:\.|$)/;
+	  my $mprop = $multiprops->{$param_prefix} ||= Multiprop->new(cvterms => [ ]);
+	  if (defined $mprop->value) {
+	    # if we pulled out out of the $multiprops cache it should have an undefined value attribute
+	    $schema->defer_exception_once("Free text value not allowed for non-final prefixed protocol parameter '$param_name'");
+	  } else {
+	    # append to the cvterms
+	    push @{$mprop->cvterms}, @cvterm_sentence;
+	    # and add a free text value
+	    $mprop->value($param_value) if (defined $param_value);
+	  }
+	}
+	# add the multiprops to $self now
+	foreach my $mprop (values %{$multiprops}) {
+	  $self->add_multiprop($mprop);
 	}
       }
+
 
       push @protocols, $protocol;
     }
@@ -397,11 +518,30 @@ sub delete {
     }
     $linker->delete;
   }
+
+  # protocols
+  $linkers = $self->related_resultset('nd_experiment_protocols');
+  while (my $linker = $linkers->next) {
+    if ($linker->nd_protocol->nd_experiments->count == 1) {
+      $linker->nd_protocol->delete;
+    }
+    $linker->delete;
+  }
+
+  # geolocations
   my $geoloc = $self->nd_geolocation;
   if ($geoloc->nd_experiments->count == 1) {
     $geoloc->delete;
   }
 
+  # contacts
+  $linkers = $self->related_resultset('nd_experiment_contacts');
+  while (my $linker = $linkers->next) {
+    if ($linker->contact->experiments->count == 1) {
+      $linker->contact->delete;
+    }
+    $linker->delete;
+  }
   return $self->SUPER::delete();
 }
 
@@ -582,18 +722,44 @@ sub add_multiprop {
 =head2 multiprops
 
 get a arrayref of multiprops
+optional filter cvterm (identity matching)
 
 =cut
 
 sub multiprops {
-  my ($self) = @_;
+  my ($self, $filter) = @_;
 
   return Multiprops->get_multiprops
     ( row => $self,
       prop_relation_name => 'nd_experimentprops',
+      filter => $filter,
     );
 }
 
+
+=head description
+
+get/setter for description (stored via rank==0 prop)
+
+usage
+
+  $protocol->description("this is some text");
+  print $protocol->description;
+
+
+returns the text in both cases
+
+=cut
+
+sub description {
+  my ($self, $description) = @_;
+  return Extra->attribute
+    ( value => $description,
+      prop_type => $self->result_source->schema->types->description,
+      prop_relation_name => 'nd_experimentprops',
+      row => $self,
+    );
+}
 
 
 =head2 as_data_structure
@@ -609,51 +775,6 @@ sub as_data_structure {
   return {
 	  $self->basic_info,
           warning => 'Warning: Experiment Result has not been sub-classed!',
-
-#
-# the following information might be useful for as_data_structure() in sub-classes (FieldCollection, etc)
-#
-# 	  nd_geolocation => $self->nd_geolocation->as_data_structure,  # only for field_collection
-#
-#	  genotypes => [ map {
-#	    { $_->get_columns,
-#		genotypeprops => [ map {
-#		  { 'type.name' => $_->type->name,
-#		      $_->get_columns,
-#		    }
-#		} $_->genotypeprops ],
-#	      }
-#	  } $self->genotypes,
-#		       ],
-#
-#	  phenotypes => [ map {
-#	    { $_->get_columns,
-#		$_->observable ? ( 'observable.name' => $_->observable->name ) : (),
-#		  $_->attr ? ( 'attr.name' => $_->attr->name ) : (),
-#		    $_->cvalue ? ( 'cvalue.name' => $_->cvalue->name ) : (),
-#		  }
-#	  } $self->phenotypes,
-#			],
-#
-#	  nd_experimentprops => [ map {
-#	    { $_->get_columns,
-#		'type.name' => $_->type->name,
-#	      }
-#	  } $self->nd_experimentprops,
-#				],
-#
-#	  nd_protocols => [ map {
-#	    { $_->get_columns,
-#		protocolprops => [ map {
-#		  { 'type.name' => $_->type->name,
-#		      $_->get_columns,
-#		  }
-#		} $_->nd_protocolprops,
-#				 ],
-#			       }
-#	  } $self->nd_protocols
-#			  ],
-           
 	 };
 }
 
@@ -668,11 +789,30 @@ sub basic_info {
 
   return (
 	  id => $self->stable_id,
-	  external_id => $self->external_id,
+	  name => $self->external_id,
+	  description => $self->description,
           props => [ map { $_->as_data_structure } $self->multiprops ],
+	  protocols => [ map { $_->as_data_structure } $self->protocols ],
+	  performers => [ map { $_->as_data_structure } $self->contacts ],
 	 );
 }
 
+
+=head2 ordered_hashref
+
+Wrapper for Tie::Hash::Indexed - returns a hashref which has already been tied to Tie::Hash::Indexed
+
+no args.
+
+usage: $foo->{bar} = ordered_hashref();  $foo->{bar}{hello} = 123;
+
+=cut
+
+sub ordered_hashref {
+  my $ref = {};
+  tie %{$ref}, 'Tie::Hash::Indexed';
+  return $ref;
+}
 
 =head1 AUTHOR
 

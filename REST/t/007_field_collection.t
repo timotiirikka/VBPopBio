@@ -25,7 +25,7 @@ diag("$url response:\n$json") if ($verbose); # print diagnostics to terminal
 $data = eval { from_json $json };
 ok($data, "$url json decoding");
 is($data->{id}, $assay_id, "$url ID check");
-is($data->{external_id}, "Kela.c1", "$url external_id check");
+is($data->{name}, "Kela.c1", "$url name check");
 ok(defined $data->{geolocation}, "$url should have a geolocation");
 is($data->{geolocation}{name}, "Kela", "$url geolocation name check");
 

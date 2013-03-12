@@ -1,4 +1,4 @@
-use Test::More tests => 8;
+use Test::More tests => 10;
 
 use strict;
 use JSON;
@@ -8,6 +8,7 @@ my $schema = Bio::Chado::VBPopBio->connect($dsn, $ENV{USER}, undef, { AutoCommit
 my $projects = $schema->projects;
 
 my $json = JSON->new->pretty;
+my $verbose = 1; # print out JSON (or not)
 
 $schema->txn_do_deferred(
 		sub {
@@ -15,12 +16,14 @@ $schema->txn_do_deferred(
 
 		  # make some human readable text from the project and related objects:
 		  my $project_json = $json->encode($project->as_data_structure);
-		  diag("Project '", $project->name, "' was created temporarily as:\n$project_json");
+		  diag("Project '", $project->name, "' was created temporarily as:\n$project_json") if ($verbose);
 
 		  # if (open(TEMP, ">temp-project.json")) { print TEMP $project_json."\n";  close(TEMP); }
 
 		  # run some tests
 		  is($project->name, 'Example ISA-Tab for VectorBase PopBio', "project name");
+		  is($project->submission_date, '2012-01-01', 'submission date');
+		  is($project->public_release_date, '2013-01-01', 'public release date');
 
 		  my $stock = $project->stocks->first;
 		  isa_ok($stock, "Bio::Chado::VBPopBio::Result::Stock", "first stock is a stock");
@@ -32,12 +35,19 @@ $schema->txn_do_deferred(
 		  isa_ok($geo, "Bio::Chado::VBPopBio::Result::Geolocation", "geo is correct class");
 
 
-		  is($stock->genotype_assays->count, 2, "stock has two genotype_assays");
+		  is($stock->genotype_assays->count, 3, "stock has three genotype_assays");
 
 		  # karyotype assay is loaded first (comes first in investigation sheet)
-		  my ($ka, $ga) = $stock->genotype_assays->all;
+		  my ($ka, $ga, $sa) = $stock->genotype_assays->all;
 
-		  isa_ok($ka, "Bio::Chado::VBPopBio::Result::Experiment::GenotypeAssay", "genotype_assay is correct class");
+#		  isa_ok($ka, "Bio::Chado::VBPopBio::Result::Experiment::GenotypeAssay", "genotype_assay is correct class");
+
+
+#		  is($ka->protocols->first->description, "Inversion karyotypes were determined via Giemsa staining and visual inspection under light microscopy", "protocol description");
+
+
+		  my $spa = $stock->species_identification_assays->first;
+		  is($spa->description, "This was a really nice assay.", "species id assay description");
 
 		  # my $kap = $ka->protocols;
 

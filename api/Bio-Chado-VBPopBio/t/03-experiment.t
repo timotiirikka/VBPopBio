@@ -1,4 +1,4 @@
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 use Bio::Chado::VBPopBio;
 my $dsn = "dbi:Pg:dbname=$ENV{CHADO_DB_NAME}";
@@ -47,6 +47,7 @@ my $data =
 		      my $fc = $field_collections->create({
 							   nd_geolocation => $geoloc
 							  });
+		      $fc->description('very interesting');
 
 		      my $sp = $species_id_assays->create();
 		      my $ga = $genotype_assays->create();
@@ -57,6 +58,7 @@ my $data =
 
 		      my %data = (
 				  fc_id => $fc->id,
+				  fc_descrip => $fc->description,
 				  fc_type => $fc->type->name,
 				  geo_id => $geoloc->id,
 				  geo_longitude => $geoloc->longitude,
@@ -78,8 +80,9 @@ my $data =
 		    });
 
 
-ok($data->{fc_type} eq 'field collection');
-ok($data->{geo_longitude} == 4.56);
+is($data->{fc_type}, 'field collection', 'fc type');
+is($data->{fc_descrip}, 'very interesting', 'experiment->description');
+is($data->{geo_longitude}, 4.56, 'geo longitude');
 
 my $no_fc = $field_collections->find($data->{fc_id});
 ok(!defined $no_fc, "field collection deletion");

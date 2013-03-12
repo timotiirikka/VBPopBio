@@ -25,7 +25,7 @@ diag("$url response:\n$json") if ($verbose); # print diagnostics to terminal
 $data = eval { from_json $json };
 ok($data, "$url json decoding");
 is($data->{id}, $assay_id, "$url ID check");
-is($data->{external_id}, "SM-NRUE.ga1", "$url external_id check");
+is($data->{name}, "SM-NRUE.ga1", "$url name check");
 ok(!defined $data->{geolocation}, "$url should NOT have a geolocation");
 ok(defined $data->{genotypes}, "$url should have genotypes");
 is(scalar(@{$data->{genotypes}}), 2, "$url should have 2 genotypes");

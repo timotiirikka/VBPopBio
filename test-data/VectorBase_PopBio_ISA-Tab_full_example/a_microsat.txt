@@ -1,0 +1,3 @@
+"Sample Name"	"Assay Name"	"Protocol REF"	Performer	Date	"Comment [note]"	"Raw Data File"
+Sample01	Sample01.ga1	PROTO4			"bands were smeary"	g_microsat.txt
+Sample02	Sample02.ga1	PROTO4			"clean bands"	g_microsat.txt

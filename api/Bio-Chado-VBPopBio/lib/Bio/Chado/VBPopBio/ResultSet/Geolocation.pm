@@ -2,7 +2,8 @@ package Bio::Chado::VBPopBio::ResultSet::Geolocation;
 
 use base 'DBIx::Class::ResultSet';
 use Carp;
-use aliased 'Bio::Chado::VBPopBio::Util::Multiprop';
+use aliased 'Bio::Chado::VBPopBio::Util::Multiprops';
+use Tie::Hash::Indexed;
 
 =head1 NAME
 
@@ -17,7 +18,10 @@ Re-branded NdGeolocation object
 
 =head2 find_or_create_from_isatab
 
- Usage: $geolocations->find_or_create_from_isatab($isatab_assay_data, $stock, $project, $ontologies, $study);
+Create a gelocation object and attach necessary properties.
+HAS SIDE-EFFECTS of removing location-specific characteristics from isa-tab data structure.
+
+ Usage: $geolocations->find_or_create_from_isatab($isatab_assay_data);
 
  Desc: This method creates a stock object from the isatab sample hashref (from a field collection assay)
  Ret : a new Experiment::FieldCollection row (is a NdExperiment)
@@ -28,72 +32,80 @@ Re-branded NdGeolocation object
                                                        term_accession_number => 123,
                                                        term_source_ref => 'GAZ' } },
          }
-       Stock object (Bio::Chado::VBPopBio)
-       Project object (Bio::Chado::VBPopBio)
-       hashref $isa->{ontology_lookup} from ISA-Tab returned from Bio::Parser::ISATab
-       hashref ISA-Tab current study (used for protocols)
 
 =cut
 
 sub find_or_create_from_isatab {
-  my ($self, $assay_data, $stock, $project, $ontologies, $study) = @_;
+  my ($self, $assay_data) = @_;
   my $schema = $self->result_source->schema;
 
   # create the nd_experiment and stock linker type
   my $cvterms = $schema->cvterms;
 
+  my $collection_site_heading = 'Collection site (VBcv:0000831)';
+  my $latitude_heading = 'Collection site latitude (VBcv:0000817)';
+  my $longitude_heading = 'Collection site longitude (VBcv:0000816)';
+  my $altitude_heading = 'Collection site altitude (VBcv:0000832)';
+
+  # note that if any value provided to find_or_new is null,
+  # then a new record will be created
+  # (this seems reasonable though)
   my $geolocation =
-    $self->find_or_create({
-			   description => $assay_data->{characteristics}{'Collection site'}{value} || undef,
-			   latitude => $assay_data->{characteristics}{'Collection site latitude'}{value} || undef,
-			   longitude => $assay_data->{characteristics}{'Collection site longitude'}{value} || undef,
-			   altitude => $assay_data->{characteristics}{'Collection site altitude'}{value} || undef,
-			   geodetic_datum => 'WGS 84',
-			  });
+    $self->find_or_new({
+			description => $assay_data->{characteristics}{$collection_site_heading}{value} || undef,
+			latitude => $assay_data->{characteristics}{$latitude_heading}{value} || undef,
+			longitude => $assay_data->{characteristics}{$longitude_heading}{value} || undef,
+			altitude => $assay_data->{characteristics}{$altitude_heading}{value} || undef,
+			geodetic_datum => 'WGS 84',
+		       });
 
-  # next, add the GAZ term as a property if it has been provided
-  # notes: the logic here needs refining - especially if GAZ has lat/long, need to fill that in
-  # do we want to do the look-up first in props based on GAZ term?
-  # or do we allow multiple locations (with different lat/long) with same GAZ term (Bob thinks yes)
-  # expect some bloat in this table until we come up with a suitable policy.
+  # don't delete "Collection site" characteristic!
+  delete $assay_data->{characteristics}{$latitude_heading};
+  delete $assay_data->{characteristics}{$longitude_heading};
+  delete $assay_data->{characteristics}{$altitude_heading};
 
-  my $site = $assay_data->{characteristics}{'Collection site'}; # shorthand hashref
-  if ($site->{term_source_ref} && $site->{term_source_ref} eq 'GAZ' # really we should check in $ontologies->{GAZ}{term_source_description} eq 'Gazetteer'
-      && defined $site->{term_accession_number}) {
-
-    # look up GAZ cvterm via its accession number
-    my $gaz_db = $schema->dbs->find( { name => 'GAZ' }, { key => 'db_c1' } );
-    if ($gaz_db) {
-      my $gaz_dbxref = $schema->dbxrefs->find( { accession => sprintf("%08d", $site->{term_accession_number}),
-				 	         db => $gaz_db,
-						 version => '',
-					       }, { key => 'dbxref_c1' });
-
-      if ($gaz_dbxref && (my $gaz_term = $cvterms->find( { dbxref => $gaz_dbxref }, { key => 'cvterm_c2' } ))) {
-	# add the geolocationprop manually (BCS convenience function doesn't seem suitable here)
-	# maybe check for agreement between text provided and gaz_term->name?
-	# could be issues with international characters etc
-	$geolocation->add_multiprop(Multiprop->new(cvterms => [ $gaz_term ]));
-      } else {
-	# insert better error handling here
-	$schema->defer_exception_once("can't find GAZ:$site->{term_accession_number} for $site->{value}");
-      }
-    } else {
-      croak "can't find db name=GAZ in Chado\n";
+  # now copy the relevant remaining characteristics into a new data structure
+  my $location_characteristics = ordered_hashref();
+  foreach my $cname (keys %{$assay_data->{characteristics}}) {
+    # perhaps replace this with cvterm parent test instead!
+    # have to decide what to do with household ID!
+    if ($cname =~ /collection site/i) {
+      $location_characteristics->{$cname} = delete $assay_data->{characteristics}{$cname};
     }
   }
+  # now add some props to geolocation unless we already pulled it from the db.
+  # this means that the first time you create a geolocation (with no NULL values, see above)
+  # you'd better get all its props correct (potentially between projects)
+  # An alternative would be to include the assay or project stable_id in the description
+  # so that geolocations were only "shared" within a project not between
+  unless ($geolocation->in_storage) {
+    $geolocation->insert;
 
-  # load simple text (no GAZ because we should already have that for "leaf) gelocation props for
-  foreach my $geotype (qw/village country county region district location locality province/) {
-    my $value = $assay_data->{characteristics}{"Collection site $geotype"}{value};
-    my $gterm = $cvterms->find_by_name({ term_source_ref=>'VBcv',
-					 term_name => $geotype });
-    if ($value && $gterm) {
-      $geolocation->add_multiprop(Multiprop->new(cvterms => [ $gterm ], value => $value));
-    }
+    # now add these as multiprops to the geolocation
+    Multiprops->add_multiprops_from_isatab_characteristics
+      ( row => $geolocation,
+	prop_relation_name => 'nd_geolocationprops',
+	characteristics => $location_characteristics,
+      );
   }
 
   return $geolocation;
+}
+
+=head2 ordered_hashref
+
+Wrapper for Tie::Hash::Indexed - returns a hashref which has already been tied to Tie::Hash::Indexed
+
+no args.
+
+usage: $foo->{bar} = ordered_hashref();  $foo->{bar}{hello} = 123;
+
+=cut
+
+sub ordered_hashref {
+  my $ref = {};
+  tie %{$ref}, 'Tie::Hash::Indexed';
+  return $ref;
 }
 
 =head1 AUTHOR
